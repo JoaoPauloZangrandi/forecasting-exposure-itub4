@@ -29,13 +29,19 @@ run_diagnostics <- function(cons, sh, panel_res, group_map) {
   add("%s Cabecalhos CONS identicos entre anos (%d cols)  | SH identicos (%d cols)",
       flag(cons_hdr_ok && sh_hdr_ok), hdr[base=="CONS", n_cols[1]], hdr[base=="SH", n_cols[1]])
 
-  # 2) Formato de número da CONS (se fread leu como numérico, é prova de formato US)
+  # 2) Formato de número da CONS. O formato é decimal americano (ponto). Em
+  # alguns anos o fread tipa a coluna como character por causa de ~22 linhas com
+  # aspas malformadas no Nome_Ativo (acoes de companhia fechada) que jogam texto
+  # na coluna de valor — nenhuma e ITUB4. O parser robusto as descarta (NA).
   write_tab(cons$cons_diag, "audit_cons_number_format.csv")
-  cons_num_ok <- all(grepl("numeric|integer|double", cons$cons_diag$valor_class)) &&
-                 sum(cons$cons_diag$n_na_valor_inesperado) == 0
-  add("%s Valor_Ativo_mil lido como numerico em todos os anos (classes: %s); NA inesperados=%d",
-      flag(cons_num_ok), paste(unique(cons$cons_diag$valor_class), collapse=","),
-      sum(cons$cons_diag$n_na_valor_inesperado))
+  if (!is.null(cons$valor_bad)) write_tab(cons$valor_bad, "audit_cons_valor_nao_parseado.csv")
+  tot_rows <- sum(cons$cons_diag$n_rows)
+  tot_bad  <- sum(cons$cons_diag$n_na_valor_inesperado)
+  itub4_bad <- !is.null(cons$valor_bad) && nrow(cons$valor_bad) > 0 &&
+               any(grepl("ITUB4", cons$valor_bad$nome_ativo))
+  cons_num_ok <- (tot_bad / tot_rows) < 1e-5 && !itub4_bad
+  add("%s Valor_Ativo_mil decimal US; %d/%d linhas nao-numericas (aspas malformadas, nao-ITUB4=%s) -> NA",
+      flag(cons_num_ok), tot_bad, tot_rows, !itub4_bad)
 
   # 3) 100% "Ações"
   write_tab(cons$tipo_audit[order(ano, -n_rows)], "audit_cons_tipo_ativo.csv")

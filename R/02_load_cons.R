@@ -47,6 +47,13 @@ load_cons_year <- function(yr) {
     data_max  = max(dt$data, na.rm = TRUE)
   )
 
+  # Linhas cujo "valor" não é numérico mesmo após o parser robusto. Na prática
+  # são aspas malformadas no Nome_Ativo (ações de companhia fechada) que jogam
+  # texto na coluna de valor. Guardamos para auditoria (espera-se nenhuma ITUB4).
+  valor_bad <- dt[is.na(valor_mil) & !is.na(valor_raw) &
+                    trimws(as.character(valor_raw)) != "",
+                  .(valor_raw = as.character(valor_raw), nome_ativo)][, ano := yr][]
+
   cons_keys <- unique(dt[, .(data, codigo_fundo, cnpj)])
 
   # Caminho rápido para o ticker-alvo (pré-filtro fixo); depois confirma pelo
@@ -70,7 +77,7 @@ load_cons_year <- function(yr) {
 
   rm(dt, itub4); gc()
   list(cons_keys = cons_keys, itub4_fm = itub4_fm, variant_audit = variant_audit,
-       tipo_audit = tipo_audit, cons_diag = cons_diag)
+       tipo_audit = tipo_audit, cons_diag = cons_diag, valor_bad = valor_bad)
 }
 
 load_cons_all <- function(years) {
@@ -86,6 +93,7 @@ load_cons_all <- function(years) {
     monthly_dates = sort(unique(cons_keys$data)),
     variant_audit = rbindlist(lapply(parts, `[[`, "variant_audit")),
     tipo_audit    = rbindlist(lapply(parts, `[[`, "tipo_audit")),
-    cons_diag     = rbindlist(lapply(parts, `[[`, "cons_diag"))
+    cons_diag     = rbindlist(lapply(parts, `[[`, "cons_diag")),
+    valor_bad     = rbindlist(lapply(parts, `[[`, "valor_bad"), fill = TRUE)
   )
 }

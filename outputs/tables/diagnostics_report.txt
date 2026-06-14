@@ -1,0 +1,14 @@
+[OK] Cabecalhos CONS identicos entre anos (9 cols)  | SH identicos (10 cols)
+[OK] Valor_Ativo_mil decimal US; 22/21135383 linhas nao-numericas (aspas malformadas, nao-ITUB4=TRUE) -> NA
+[OK] CONS e 100% 'Acoes': 100.0000% (tipos distintos=1)
+[OK] ITUB4: 3 variantes; obrigacoes com sinal negativo (total mil=-43604660)
+      2016 direta    = R$ 35.4 bi
+      2016 cedida    = R$ 9.6 bi
+      2016 obrigacao = R$ -5.8 bi
+[OK] SH sem duplicata (data,fundo): 0 duplicatas | gestoras 2016=50, %FIC linhas 2016=52.6%
+[OK] Datas de competencia da CONS presentes no SH: 72/72
+      Chave fundo-mes: CONS sem SH=2 | SH sem CONS=42024 | CNPJ da CONS no SH=100.00%
+      Cobertura media (fundos-mes do SH com carteira na CONS): 74.7%
+      Fundos-mes com ITUB4 sem match no SH (perda de atribuicao): 0
+      FICs com ITUB4 direto (possivel dupla contagem direta+indireta): 61.7% dos fundos-ITUB4
+      Gestoras: 53 originais -> 42 grupos (20 consolidadas)
