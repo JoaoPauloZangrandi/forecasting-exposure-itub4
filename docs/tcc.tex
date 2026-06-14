@@ -1,0 +1,377 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{../outputs/figures/}}
+\setlength{\parskip}{0.4em}
+\renewcommand{\arraystretch}{1.15}
+
+\title{\textbf{Forecasting da exposição de gestoras de ações \\ e o risco de estruturas fundo-sobre-fundo} \\[0.4em]
+\large Validação das bases, pipeline de exposição e plano de previsão --- piloto ITUB4}
+\author{João Paulo Zangrandi \\ \small Orientador: Prof.\ Maurício Ferraresi Junior \\ \small Escola de Economia de São Paulo --- FGV EESP}
+\date{\today}
+
+\begin{document}
+
+% ------------------------------------------------------------------ CAPA
+\begin{titlepage}
+\centering
+\vspace*{1.5cm}
+{\scshape\large Fundação Getulio Vargas \\ Escola de Economia de São Paulo (EESP)\par}
+\vspace{2.5cm}
+{\huge\bfseries Forecasting da exposição de gestoras de ações e o risco de estruturas fundo-sobre-fundo\par}
+\vspace{0.8cm}
+{\Large Validação das bases, pipeline de exposição e plano de previsão\par}
+{\large (piloto: ITUB4 --- Itaú Unibanco PN, 2016--2021)\par}
+\vspace{3cm}
+{\Large João Paulo Zangrandi\par}
+\vspace{0.5cm}
+{\large Orientador: Prof.\ Maurício Ferraresi Junior\par}
+\vfill
+{\large São Paulo \\ \today\par}
+\end{titlepage}
+
+% --------------------------------------------------------------- RESUMO
+\section*{Resumo}
+\addcontentsline{toc}{section}{Resumo}
+Este documento consolida a fase de \emph{construção e validação de dados} de um trabalho que busca
+medir e inferir o risco de estruturas ``fundo-sobre-fundo'' no mercado brasileiro de fundos, usando como
+lente a exposição das gestoras a ações. A motivação teórica vem do \emph{demand-based asset pricing}
+\citep{koijenyogo2019,gabaixkoijen2021}: se a demanda dos investidores institucionais tem estrutura
+(inércia, co-movimento), ela é em parte previsível, e estruturas aninhadas de fundos podem amplificar ou
+propagar choques \citep{greenwoodthesmar2011}. Validamos o método com uma única ação, \textbf{ITUB4}, no
+período 2016--2021. A partir das bases públicas da CVM (composição de carteiras consolidada, ``CONS'', e
+série histórica, ``SH''), construímos um \emph{pipeline} modular em R que mede a exposição em \textbf{valor}
+(em R\$ e em US\$), na definição \textbf{net} (direta $+$ cedida em empréstimo $+$ obrigações), consolidando
+entidades do mesmo grupo econômico e mantendo os fundos de cotas (FIC). Todas as afirmações sobre as bases
+foram verificadas contra os arquivos reais; reportamos cada diagnóstico e as discrepâncias encontradas. O
+painel final tem 2.835 observações gestora-mês (42 grupos econômicos, 72 meses). Documentamos ainda a
+\textbf{limitação crítica} de que a base CONS é integralmente consolidada em ações --- o que apaga as
+relações fundo$\to$fundo --- e o plano para obter a base não consolidada (CDA, Bloco 2: cotas de fundos) e
+montar o grafo fundo-sobre-fundo. Os modelos de previsão (PCA/análise fatorial e GNN) estão apenas
+\emph{planejados}; nenhum foi executado nesta fase.
+
+\noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de investimento; fundos de cotas;
+exposição em ações; risco sistêmico de redes; CVM.
+
+% -------------------------------------------------------------- ABSTRACT
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+This report consolidates the \emph{data construction and validation} phase of a project that measures and
+infers the risk of ``fund-of-funds'' structures in the Brazilian fund market, using equity asset managers'
+exposure as a lens. The theoretical motivation comes from demand-based asset pricing
+\citep{koijenyogo2019,gabaixkoijen2021}: if institutional demand has structure, it is partly predictable,
+and nested fund structures may amplify or propagate shocks \citep{greenwoodthesmar2011}. We validate the
+method with a single stock, ITUB4, over 2016--2021. From the Brazilian regulator's (CVM) public datasets we
+build a modular R pipeline measuring exposure in value (BRL and USD), in a net definition (direct $+$ lent
+$+$ borrowed obligations), consolidating economic groups and keeping feeder funds (FIC). Every claim about
+the data was verified against the raw files. The final panel has 2{,}835 manager-month observations (42
+economic groups, 72 months). We document the critical limitation that the consolidated dataset dissolves
+fund-to-fund links, and the plan to obtain the non-consolidated dataset (CDA, Block~2: fund quotas) to build
+the fund-of-funds graph. Forecasting models (PCA/factor analysis and GNNs) are only planned; none were run.
+
+\newpage
+\tableofcontents
+\newpage
+
+% =================================================================
+\section{Introdução e motivação}\label{sec:intro}
+
+O objeto central deste trabalho é o \textbf{risco das estruturas ``fundo-sobre-fundo''}: fundos de cotas
+(FIC) que investem em outros fundos que, por sua vez, detêm ações. A \textbf{lente} para enxergá-lo é a
+\textbf{exposição das gestoras a ações}. Para validar todo o método antes de estendê-lo, fixamos uma única
+ação, \textbf{ITUB4} (Itaú Unibanco PN), no período \textbf{2016--2021} (dados mensais de carteiras).
+
+A motivação teórica vem do \emph{demand-based asset pricing}. \citet{koijenyogo2019} propõem um sistema de
+demanda em que os preços se formam pela demanda dos investidores institucionais, e não apenas por
+fundamentos; \citet{gabaixkoijen2021} argumentam que o mercado agregado é inelástico, de modo que fluxos
+têm impacto desproporcional sobre preços. Se a demanda das gestoras tem estrutura --- inércia, contágio,
+co-movimento --- então (i)~ela é em parte \emph{previsível} e (ii)~as estruturas aninhadas de fundos podem
+\emph{amplificar ou propagar} choques. \citet{greenwoodthesmar2011} formalizam como a estrutura de
+propriedade (\emph{ownership}) gera ``fragilidade de preços'': ativos detidos por investidores sujeitos a
+choques correlacionados ficam mais voláteis. Daí o interesse em medir ``participações sobre participações''
+para inferir o risco dessas estruturas.
+
+Esta fase entrega: (a)~a validação rigorosa das bases; (b)~um \emph{pipeline} reprodutível que produz o
+painel de exposição; (c)~os diagnósticos com resultados reais; e (d)~o plano para as próximas etapas
+(grafo fundo-sobre-fundo e previsão). \textbf{Nenhum modelo de previsão foi executado.}
+
+% =================================================================
+\section{Revisão bibliográfica}\label{sec:revisao}
+
+\paragraph{Demand-based asset pricing.} \citet{koijenyogo2019} estimam um sistema de demanda por ativos a
+partir das carteiras de investidores institucionais e mostram que características e demanda explicam preços
+e suas variações. \citet{gabaixkoijen2021} (a ``hipótese dos mercados inelásticos'') quantificam a baixa
+elasticidade-preço da demanda agregada e o efeito amplificado de fluxos.
+
+\paragraph{Propriedade comum e fragilidade de preços.} \citet{greenwoodthesmar2011} introduzem medidas de
+fragilidade baseadas na concentração e na correlação da propriedade; a intuição transita diretamente para o
+nosso problema, em que a sobreposição de carteiras entre gestoras (e a duplicação via FIC) pode concentrar
+risco.
+
+\paragraph{Métodos.} Para os fatores latentes de demanda usaremos análise de componentes principais e
+análise fatorial, seguindo \citet[cap.\ 3 e 4]{artesbarroso2023}. Para modelar a rede de gestoras/fundos como
+grafo, a referência introdutória é \citet{sanchezlengeling2021}.
+
+\paragraph{Plataformas e o paper do orientador.} A referência central do orientador é o working paper
+\emph{Replicant Investment Platforms} \citep{ferraresi_replicant}, que trata plataformas de investimento
+como unidade de análise sob o arcabouço de demanda. \textbf{A citação bibliográfica exata será confirmada
+com o orientador} (mantida aqui como entrada provisória, para não se inventar dados bibliográficos).
+
+% =================================================================
+\section{As bases de dados}\label{sec:dados}
+
+Usamos duas bases públicas da CVM, uma por ano (2016--2021), ambas com separador ``\texttt{;}'' e
+codificação UTF-8.
+
+\subsection{CONS --- composição consolidada de carteiras}
+Granularidade fundo~$\times$~mês~$\times$~ativo. Colunas relevantes: \texttt{CNPJ}, \texttt{Código},
+\texttt{Tipo\_Ativo}, \texttt{Data\_Competência}, \texttt{Nome\_Ativo}, \texttt{Valor\_Ativo\_mil}. A data de
+competência é fim de mês (\texttt{AAAA-MM-DD}). Os valores estão em \textbf{formato americano} (ponto
+decimal, inclusive notação científica, p.ex.\ \texttt{6.37E-4}); o \emph{parse} é direto, sem remoção de
+separador. Confirmamos que a base é \textbf{100\% ``Ações''} --- ou seja, a consolidação da CVM já
+dissolveu as cotas de fundos em ações (Seção~\ref{sec:limitacao}).
+
+Há \textbf{três variantes} de ITUB4 em \texttt{Nome\_Ativo}, todas com \texttt{Tipo\_Ativo = ``Ações''}, que
+identificamos de forma robusta pelo \emph{ticker} terminal e classificamos por palavra-chave
+(Tabela~\ref{tab:variants}): posição \emph{direta}; ações \emph{cedidas} em empréstimo (ainda são exposição
+do fundo); e \emph{obrigações} por ações recebidas em empréstimo (aluguel tomado, valor negativo).
+
+\subsection{SH --- série histórica}
+Granularidade fundo~$\times$~dia. Traz a \textbf{GESTORA} e o \textbf{patrimônio líquido (PL)} de cada
+fundo --- a informação ausente na CONS. O PL está em \textbf{formato brasileiro}
+(\texttt{R\$ 49.749,57}): removemos ``R\$'' e o ponto de milhar e trocamos a vírgula decimal por ponto. A
+data é diária (\texttt{dd/mm/aaaa}).
+
+\subsection{Ligação entre as bases e grupos econômicos}
+A junção é por fundo: \texttt{Código} (CONS) $=$ \texttt{COD\_FUNDO} (SH) para o mesmo CNPJ. Como a CONS é
+mensal e a SH é diária, restringimos a SH às datas de competência da CONS. Por fim, consolidamos entidades
+do mesmo grupo econômico em uma única gestora (Itaú, BTG Pactual, XP, Caixa, Credit Suisse, BNP Paribas,
+JGP etc.) por casamento de expressões regulares sobre o nome normalizado, gerando uma tabela de revisão
+(\texttt{audit\_gestora\_group\_map.csv}).
+
+% =================================================================
+\section{Decisões metodológicas}\label{sec:metodo}
+
+As decisões abaixo foram travadas com o orientador.
+
+\begin{enumerate}
+\item \textbf{Unidade:} gestora, consolidada por grupo econômico.
+\item \textbf{Medida em valor, não quantidade}, em \textbf{R\$ e em US\$}. A conversão usa a PTAX de fim de
+mês (BCB, SGS série~1) \citep{bcb_sgs}. Modelar a posição em valor é mais intuitivo para o leitor do que por
+quantidades.
+\item \textbf{Exposição net} $=$ direta $+$ cedida em empréstimo $+$ obrigações (estas entram negativas). O
+empréstimo é material (Seção~\ref{sec:diag}); a definição é parametrizável (\texttt{direta}/\texttt{long}/\texttt{net}).
+\item \textbf{Estacionariedade:} o alvo primário é a \textbf{posição} (em nível, não-estacionária $\Rightarrow$
+diferenciar) e sua variação mensal. O \textbf{peso} (posição/PL) \emph{não} é diferenciado, para evitar
+autocorrelação espúria. Reportamos o teste ADF (Seção~\ref{sec:diag}).
+\item \textbf{Manter os FIC:} a estrutura aninhada é o objeto de estudo, não ruído. A duplicação direta/
+indireta é tolerada e diagnosticada; o que preocupa são as estruturas circulares (só detectáveis com a base
+da Seção~\ref{sec:limitacao}).
+\item \textbf{Deltas ``gap-safe'':} variações calculadas apenas entre meses consecutivos.
+\end{enumerate}
+
+% =================================================================
+\section{O pipeline, passo a passo}\label{sec:pipeline}
+
+O código está em \texttt{R/}, modular e orquestrado por \texttt{R/99\_run\_all.R}:
+\begin{itemize}
+\item \texttt{00\_config.R} --- parâmetros (diretório dos dados, anos, ticker, modo de exposição, grupos).
+\item \texttt{01\_utils.R} --- \emph{parsers} (número americano, monetário brasileiro), normalização de CNPJ,
+extração de \emph{ticker} por regex e classificação de variante.
+\item \texttt{02\_load\_cons.R} / \texttt{03\_load\_sh.R} --- carga ano a ano com \texttt{gc()}; retornam
+apenas \emph{extracts} leves (os $\sim$4{,}2~GB brutos são descartados a cada ano).
+\item \texttt{04\_consolidate\_groups.R} --- consolidação robusta de grupos $+$ tabela de revisão.
+\item \texttt{05\_build\_panel.R} --- posição net em R\$ e US\$, peso descritivo, deltas \emph{gap-safe} e ADF.
+\item \texttt{06\_diagnostics.R} --- valida os fatos das bases e escreve as auditorias.
+\item \texttt{07\_correlation.R} --- matrizes de correlação entre gestoras $+$ figuras.
+\item \texttt{forecasting\_scaffold.R} --- esqueleto de PCA/AR/VAR/GNN, \textbf{não executado}.
+\end{itemize}
+O \emph{ticker} é parametrizado: o pipeline é genérico para qualquer ação, mas nesta fase foi testado
+apenas para ITUB4. Um \emph{cache} dos \emph{extracts} acelera reexecuções.
+
+% =================================================================
+\section{Diagnósticos e validação}\label{sec:diag}
+
+Rodamos o pipeline sobre os arquivos reais e verificamos cada afirmação sobre as bases. A
+Tabela~\ref{tab:valid} resume; o relatório completo está em \texttt{outputs/tables/diagnostics\_report.txt}.
+
+\begin{table}[H]\centering
+\caption{Validação dos fatos das bases (2016--2021), contra os dados reais.}
+\label{tab:valid}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Fato} & \textbf{Encontrado} & \textbf{Status} \\
+\midrule
+Cabeçalhos idênticos entre anos & CONS 9 colunas; SH 10 colunas & OK \\
+CONS 100\% ``Ações''            & 100,0000\% (1 tipo distinto) & OK \\
+Magnitudes 2016 (net)           & direta R\$\,35,4 bi; cedida R\$\,9,6 bi; obrig.\ $-$R\$\,5,8 bi & OK \\
+Sinal das obrigações            & negativo (total $-$R\$\,43,6 bi em 2016--2021) & OK \\
+SH: gestoras / \%FIC (2016)     & 50 gestoras; 52,6\% das linhas são FIC & OK \\
+SH: duplicata (data, fundo)     & 0 duplicatas & OK \\
+Datas da CONS presentes no SH   & 72/72 (join por data exata é seguro) & OK \\
+CNPJ da CONS presentes no SH    & 100,00\% & OK \\
+ITUB4 sem atribuição a gestora  & 0 fundos-mês & OK \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discrepância investigada (formato de número).} Em 4 dos 6 anos o \texttt{fread} tipou
+\texttt{Valor\_Ativo\_mil} como texto. A causa \emph{não} é vírgula decimal: são \textbf{22 linhas} (em
+$\sim$21,1 milhões) com \textbf{aspas malformadas} no \texttt{Nome\_Ativo} de ``ações de companhia fechada'',
+que jogam texto na coluna de valor. \textbf{Nenhuma é ITUB4}; o \emph{parser} robusto as converte em
+\texttt{NA} (impacto nulo). Isso \emph{refina} a afirmação original ``parse direto sem problemas'': o
+conteúdo numérico é, de fato, decimal americano. Ver \texttt{audit\_cons\_valor\_nao\_parseado.csv}.
+
+\begin{table}[H]\centering
+\caption{As três variantes de ITUB4 na CONS (2016--2021).}
+\label{tab:variants}
+\small
+\begin{tabular}{llrr}
+\toprule
+\textbf{Variante} & \textbf{Nome\_Ativo} & \textbf{Linhas} & \textbf{Valor (R\$ bi)} \\
+\midrule
+direta    & ITAUUNIBANCO PN N1 - ITUB4                                   & 98.290 & 468,3 \\
+cedida    & Ações e outros TVM cedidos em empréstimo - ITUB4             & 64.461 & 71,9 \\
+obrigação & Obrigações por ações e outros TVM recebidos em empréstimo - ITUB4 & 42.418 & $-$43,6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Cobertura e duplicação.} Em média 74,7\% dos fundos-mês da SH têm carteira na CONS no mesmo mês
+(o restante distingue ``ausência $=$ 0 real'' de ``NA''). Importante para o tema: \textbf{61,7\%} dos
+fundos-mês que detêm ITUB4 são FIC com ITUB4 ``direto'' (após a consolidação da CVM) --- isto é, a
+duplicação direta/indireta apontada pelo orientador é \textbf{material}.
+
+\paragraph{Estacionariedade (ADF).} Para as 40 gestoras com $\geq 24$ meses
+(Tabela~\ref{tab:adf}): a \textbf{posição em nível} é estacionária em apenas 6/40 (logo, majoritariamente
+não-estacionária --- justifica diferenciar), enquanto a sua \textbf{primeira diferença} é estacionária em
+37/40. O \textbf{peso} é estacionário em apenas 9/40: o ADF, com 72 observações, tem baixa potência e
+\emph{não} confirma de forma ampla a hipótese de que o peso já seja estacionário. Ainda assim, seguindo a
+orientação (e para evitar autocorrelação espúria ao diferenciar uma razão limitada), mantemos o peso em
+nível como variável descritiva e modelamos a \emph{posição em diferenças}.
+
+\begin{table}[H]\centering
+\caption{Teste ADF: nº de gestoras (de 40) com $p<0{,}05$ (rejeita raiz unitária).}
+\label{tab:adf}
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Série} & \textbf{Estacionárias (p $<$ 0,05)} \\
+\midrule
+Peso (posição/PL)                 & 9/40 \\
+Posição em US\$ (nível)           & 6/40 \\
+Variação da posição em US\$ (1ª dif.) & 37/40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =================================================================
+\section{Resultados descritivos da exposição}\label{sec:result}
+
+O painel final (\texttt{data/processed/painel\_itub4.csv}) tem 2.835 observações gestora-mês, 42 grupos
+econômicos e 72 meses (jan/2016 a dez/2021). Como saneamento, o peso \texttt{peso\_itub4} agora varia entre
+$-6\%$ e $+21\%$ (mediana 0,84\%), com \textbf{zero} valores impossíveis --- corrigindo uma versão anterior
+do painel em que o peso chegava a ${\sim}5\times10^{9}$ por um erro de \emph{parsing} (remoção do ponto
+decimal). A Tabela~\ref{tab:top} lista as maiores gestoras por posição média em ITUB4 (US\$).
+
+\begin{table}[H]\centering
+\caption{Maiores gestoras por posição média em ITUB4 (US\$ milhares, exposição net).}
+\label{tab:top}
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Gestora (grupo)} & \textbf{Posição média (US\$ mil)} \\
+\midrule
+Itaú & 499.548 \\
+Bradesco & 185.159 \\
+BB & 115.430 \\
+Kapitalo Investimentos & 108.869 \\
+Santander & 101.214 \\
+Occam Brasil & 66.943 \\
+SPX Capital & 54.626 \\
+BTG Pactual & 42.406 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As Figuras~\ref{fig:pos} e~\ref{fig:cor} mostram a evolução da posição e a correlação entre gestoras da
+variação mensal da posição em US\$ --- esta última explicitamente pedida pelo orientador.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.92\textwidth]{pos_usd_top_gestoras.png}
+\caption{Posição em ITUB4 por gestora (US\$ milhões, exposição net).}
+\label{fig:pos}
+\end{figure}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.82\textwidth]{correlation_heatmap_delta_usd.png}
+\caption{Correlação entre gestoras da variação mensal da posição em ITUB4 (US\$).}
+\label{fig:cor}
+\end{figure}
+
+% =================================================================
+\section{Limitação crítica e o grafo fundo-sobre-fundo}\label{sec:limitacao}
+
+A base CONS é \textbf{100\% ``Ações''}: a consolidação da CVM \emph{apagou} as relações fundo$\to$fundo (quem
+detém cotas de quem). Há uma ironia --- a consolidação que facilita medir a exposição em ações é a que
+destrói a estrutura que queremos estudar. Portanto, a partir da CONS \emph{não} é possível montar o grafo
+fundo-sobre-fundo, detectar estruturas circulares nem medir aninhamento.
+
+\paragraph{Solução (localizada).} A base \textbf{CDA não consolidada} da CVM \citep{cvm_cda} preserva essas
+relações. Em particular, o \textbf{Bloco~2 --- ``Cotas de Fundos de Investimento''} mantém as linhas em que
+um fundo detém cotas de outro fundo. Os arquivos mensais estão em
+\texttt{https://dados.cvm.gov.br/dados/FI/DOC/CDA/DADOS/cda\_fi\_AAAAMM.zip} (cada ZIP contém o arquivo do
+bloco, \texttt{cda\_fi\_BLC\_2\_AAAAMM.csv}). Os nomes exatos das colunas que identificam o fundo investido
+(CNPJ/nome da cota) serão confirmados no Dicionário de Dados da CVM (não os inventamos aqui).
+
+\paragraph{Desenho do grafo.} Nó $=$ fundo (CNPJ); aresta direcionada ``detém cotas de'', ponderada pelo
+valor investido. Sobre esse grafo: (i)~\emph{detecção de ciclos} (estruturas circulares) com
+\texttt{igraph}; (ii)~\emph{profundidade de aninhamento} (distância FIC$\to$master$\to$ação);
+(iii)~\emph{peso indireto} (exposição look-through a uma ação via cotas). Essas métricas são o ``coração''
+do risco fundo-sobre-fundo e ligam-se ao painel de exposição já construído.
+
+% =================================================================
+\section{Plano de previsão (não executado)}\label{sec:forecast}
+
+\textbf{Nenhum modelo foi rodado.} O alvo é a variação mensal da posição em US\$ por gestora, avaliada
+\emph{out-of-sample} com origem móvel. O arcabouço previsto compara:
+\begin{enumerate}
+\item \textbf{Baselines:} \emph{random walk}, AR($p$) por gestora e VAR (com regularização, dado o número
+pequeno de gestoras).
+\item \textbf{Fatores latentes de demanda:} PCA e análise fatorial \citep{artesbarroso2023}, estimados
+apenas na janela de treino para não vazar futuro, regredindo cada gestora nos $k$ fatores.
+\item \textbf{Grafo (GNN/temporal GNN):} usando a rede da Seção~\ref{sec:limitacao}; referência introdutória
+\citet{sanchezlengeling2021}.
+\end{enumerate}
+Métricas: RMSE/MAE \emph{out-of-sample} e comparação entre modelos (p.ex.\ Diebold--Mariano).
+
+% =================================================================
+\section{Conclusão e próximos passos}\label{sec:conclusao}
+
+Esta fase entregou um \emph{pipeline} reprodutível e \emph{validado contra os dados reais} para a exposição
+de gestoras a ITUB4 (em R\$ e US\$, net, com grupos consolidados e FIC mantidos), com diagnósticos completos
+e a correção de um erro de \emph{parsing} que corrompia uma versão anterior do painel. Os próximos passos,
+\emph{a pedido explícito}, são: (1)~obter a base CDA (Bloco~2) e construir o grafo fundo-sobre-fundo;
+(2)~estender o pipeline a todas as ações; (3)~executar os modelos de previsão. Nada disso foi feito ainda.
+
+\paragraph{Pontos a confirmar com o orientador.} (i)~citação exata de \emph{Replicant Investment Platforms};
+(ii)~definição de exposição padrão (mantemos \texttt{net}); (iii)~tratamento da duplicação via FIC à luz dos
+61,7\% observados.
+
+\newpage
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}
