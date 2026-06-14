@@ -6,6 +6,9 @@
 data/raw/*.csv
 data/raw/**/*.csv
 
+# Cache binário dos extracts (grande; reconstruível). O painel .csv É versionado.
+data/processed/_cache_*.rds
+
 # --- R ---
 .Rhistory
 .RData
