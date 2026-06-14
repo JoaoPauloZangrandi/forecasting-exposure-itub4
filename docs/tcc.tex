@@ -170,8 +170,11 @@ As decisões abaixo foram travadas com o orientador.
 \item \textbf{Medida em valor, não quantidade}, em \textbf{R\$ e em US\$}. A conversão usa a PTAX de fim de
 mês (BCB, SGS série~1) \citep{bcb_sgs}. Modelar a posição em valor é mais intuitivo para o leitor do que por
 quantidades.
-\item \textbf{Exposição net} $=$ direta $+$ cedida em empréstimo $+$ obrigações (estas entram negativas). O
-empréstimo é material (Seção~\ref{sec:diag}); a definição é parametrizável (\texttt{direta}/\texttt{long}/\texttt{net}).
+\item \textbf{Exposição} medida em \textbf{três definições, geradas em paralelo}: \texttt{direta} (apenas a
+linha ``ITAUUNIBANCO PN N1 - ITUB4''), \texttt{long} ($=$ direta $+$ cedida em empréstimo) e \texttt{net}
+($=$ long $+$ obrigações, que entram negativas). O painel \textbf{primário é a net} (o empréstimo é
+material), mas as três são exportadas (\texttt{painel\_itub4\_\{direta,long,net\}.csv}) para comparação de
+robustez (Seção~\ref{sec:result}).
 \item \textbf{Estacionariedade:} o alvo primário é a \textbf{posição} (em nível, não-estacionária $\Rightarrow$
 diferenciar) e sua variação mensal. O \textbf{peso} (posição/PL) \emph{não} é diferenciado, para evitar
 autocorrelação espúria. Reportamos o teste ADF (Seção~\ref{sec:diag}).
@@ -306,8 +309,31 @@ BTG Pactual & 42.406 \\
 \end{tabular}
 \end{table}
 
+\paragraph{Sensibilidade à definição de exposição.} A Tabela~\ref{tab:expo} compara as três definições. A
+posição agregada cresce de R\$\,468,3 bi (direta) para R\$\,540,1 bi (long, somando as cedidas) e recua
+para R\$\,496,5 bi na net (descontadas as obrigações). Sob a net, \textbf{264 de 2.835} observações
+gestora-mês (9,3\%) ficam \emph{net short} em ITUB4 (obrigações $>$ posições), o que nunca ocorre nas
+definições direta ou long --- evidência de que o empréstimo é material e de que vale reportar ambas as
+visões. As figuras de posição e correlação são geradas para cada definição (sufixos
+\texttt{\_direta}/\texttt{\_long}; abaixo, a net).
+
+\begin{table}[H]\centering
+\caption{Comparação das definições de exposição (2016--2021).}
+\label{tab:expo}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Definição} & \textbf{Posição agreg.\ (R\$ bi)} & \textbf{Pos.\ média (US\$ mil)} & \textbf{Obs.\ net short} & \textbf{Peso máx.} \\
+\midrule
+direta & 468,3 & 38.996 & 0   & 21,0\% \\
+long   & 540,1 & 45.145 & 0   & 21,0\% \\
+net    & 496,5 & 41.359 & 264 & 21,0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 As Figuras~\ref{fig:pos} e~\ref{fig:cor} mostram a evolução da posição e a correlação entre gestoras da
-variação mensal da posição em US\$ --- esta última explicitamente pedida pelo orientador.
+variação mensal da posição em US\$ (definição net) --- esta última explicitamente pedida pelo orientador.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.92\textwidth]{pos_usd_top_gestoras.png}

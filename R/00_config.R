@@ -16,6 +16,9 @@ TARGET_TICKER <- "ITUB4"
 # "long"   = direta + cedida em empréstimo
 # "net"    = direta + cedida + obrigações (estas entram negativas)  [PADRÃO]
 EXPOSICAO <- "net"
+# Definições geradas em paralelo (na dúvida, produzir 2+ versões). "direta" é
+# exatamente a linha "ITAUUNIBANCO PN N1 - ITUB4". O painel primário = net.
+EXPOSICOES <- c("direta", "long", "net")
 
 # --- Consolidar entidades do mesmo grupo econômico numa única gestora? ------
 CONSOLIDAR_GRUPOS <- TRUE

@@ -41,21 +41,35 @@ ptax <- tryCatch(get_ptax(), error = function(e) {
 })
 fwrite(ptax, file.path(OUT_TAB, "ptax_mensal.csv"))
 
-# --- 3. Painel ---
-panel_res <- build_panel(cons$itub4_fm, sh$sh_monthly, ptax)
-panel <- panel_res$panel
+# --- 3. Painéis nas definições de exposição (direta/long/net) ---
+# Na dúvida metodológica, geramos 2+ versões; "direta" = só "ITAUUNIBANCO PN N1 - ITUB4".
+expo_summ <- list(); panel_res_net <- NULL
+for (expo in EXPOSICOES) {
+  pr <- build_panel(cons$itub4_fm, sh$sh_monthly, ptax, expo)
+  p  <- pr$panel
+  fwrite(p, file.path(OUT_PROC, sprintf("painel_itub4_%s.csv", expo)))
+  write_tab(run_adf(p), sprintf("adf_estacionariedade_%s.csv", expo))
+  sfx <- if (expo == "net") "" else paste0("_", expo)
+  build_correlations(p, sfx)
+  plot_positions(p, sfx)
+  expo_summ[[expo]] <- data.table(
+    definicao = expo,
+    pos_brl_total_mil = sum(p$pos_brl_mil, na.rm = TRUE),
+    pos_usd_media_mil = mean(p$pos_usd_mil, na.rm = TRUE),
+    n_gestora_mes = nrow(p),
+    n_pos_negativa = sum(p$pos_brl_mil < 0, na.rm = TRUE),
+    peso_mediano = median(p$peso_itub4, na.rm = TRUE),
+    peso_max = max(p$peso_itub4, na.rm = TRUE)
+  )
+  if (expo == "net") panel_res_net <- pr
+}
+write_tab(rbindlist(expo_summ), "exposure_definitions_comparison.csv")
+
+# Painel primário = net (alias) + ADF/diagnósticos
+panel_res <- panel_res_net; panel <- panel_res$panel
 fwrite(panel, file.path(OUT_PROC, "painel_itub4.csv"))
-
-# --- 4. Estacionariedade (ADF) ---
-adf <- run_adf(panel)
-write_tab(adf, "adf_estacionariedade.csv")
-
-# --- 5. Diagnósticos (validação Seção 4) ---
+write_tab(run_adf(panel), "adf_estacionariedade.csv")
 run_diagnostics(cons, sh, panel_res, group_map)
-
-# --- 6. Correlação + figuras (descritivo) ---
-build_correlations(panel)
-plot_positions(panel)
 
 log_msg("---")
 log_msg("Painel: %d linhas | %d gestoras | %d meses (%s a %s)",

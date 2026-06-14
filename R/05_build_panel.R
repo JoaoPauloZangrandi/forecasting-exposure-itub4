@@ -18,7 +18,7 @@ get_ptax <- function() {
   dt[, .SD[.N], by = .(ano, mes)][, .(ano, mes, ptax)]   # última cotação do mês
 }
 
-build_panel <- function(itub4_fm, sh_monthly, ptax_monthly) {
+build_panel <- function(itub4_fm, sh_monthly, ptax_monthly, exposicao = EXPOSICAO) {
   sh <- copy(sh_monthly)
   sh[, gestora_grp := apply_group(gestora)]
   sh[, pl_valido := is.finite(pl_mil) & pl_mil > 0]
@@ -28,7 +28,7 @@ build_panel <- function(itub4_fm, sh_monthly, ptax_monthly) {
               value.var = "valor_mil", fun.aggregate = sum, fill = 0)
   for (v in c("direta", "cedida", "obrigacao"))
     if (!v %in% names(fm)) fm[, (v) := 0]
-  fm[, pos := switch(EXPOSICAO,
+  fm[, pos := switch(exposicao,
                      direta = direta,
                      long   = direta + cedida,
                      net    = direta + cedida + obrigacao)]
