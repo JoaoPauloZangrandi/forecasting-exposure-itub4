@@ -1,0 +1,37 @@
+# =============================================================================
+# Dados brutos da CVM — grandes (~4,2 GB), NÃO versionar.
+# Ficam em C:\Users\joaoz\Downloads\Consolidado_MF\Consolidado_MF e são
+# referenciados por DATA_DIR em R/00_config.R. Ver data/raw/README.md.
+# =============================================================================
+data/raw/*.csv
+data/raw/**/*.csv
+
+# --- R ---
+.Rhistory
+.RData
+.Rapp.history
+.Rproj.user/
+*.Rproj
+
+# --- LaTeX (temporários de compilação; o .pdf final É versionado) ---
+*.aux
+*.log
+*.bbl
+*.blg
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.run.xml
+*.bcf
+*.nav
+*.snm
+*.vrb
+
+# --- Sistema operacional ---
+Thumbs.db
+.DS_Store
+desktop.ini
