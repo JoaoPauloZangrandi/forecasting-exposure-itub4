@@ -20,7 +20,7 @@ data/processed/    bases tratadas (painel_itub4.csv)
 R/                 pipeline modular em R
   00_config.R          parâmetros (DATA_DIR, anos, ticker, modo de exposição, grupos)
   01_utils.R           parsers e helpers (número, CNPJ, ticker, desacentuação)
-  02_load_cons.R       carrega CONS por ano; exposição NET em ITUB4 por fundo-mês
+  02_load_cons.R       carrega CONS por ano; ITUB4 por variante (direta/cedida/obrigação) e fundo-mês
   03_load_sh.R         carrega SH; PL, gestora, universo mensal; auditorias
   04_consolidate_groups.R  consolidação robusta de grupos econômicos
   05_build_panel.R     painel gestora×mês: posição R$ e US$ (PTAX), peso, deltas, ADF
@@ -39,9 +39,9 @@ outputs/tables/    tabelas de auditoria (.csv)
 Origem: CVM. Duas bases por ano (2016–2021), formato `;`, UTF-8:
 
 - **CONS** (`cons_YYYY.csv`): composição consolidada de carteiras (fundo × mês × ativo). Números
-  em **formato americano** (ponto decimal, inclusive notação científica) — parse direto com
-  `as.numeric()`. **100% `Tipo_Ativo == "Ações"`** (a consolidação da CVM dissolveu as cotas em
-  ações — ver "Limitação" abaixo).
+  em **formato americano** (ponto decimal, inclusive notação científica) — parse robusto; 22 linhas
+  (em ~21 mi) com aspas malformadas em nomes de ações fechadas viram `NA` (não-ITUB4). **100%
+  `Tipo_Ativo == "Ações"`** (a consolidação da CVM dissolveu as cotas em ações — ver "Limitação").
 - **SH** (`SH_YYYY.csv`): série histórica (fundo × dia). Traz **GESTORA** e **PL**. Números em
   **formato brasileiro** (`R$ 49.749,57`), data `dd/mm/aaaa`.
 
@@ -51,7 +51,7 @@ Chave de ligação: `Código` (CONS) == `COD_FUNDO` (SH) para o mesmo CNPJ.
 
 1. **Unidade:** gestora, consolidada por grupo econômico (Itaú, BTG, XP, ...).
 2. **Medida:** **valor** (não quantidade), em **R$ e em US$** (PTAX fim de mês, BCB SGS série 1).
-3. **Exposição:** **NET = direta + cedida em empréstimo + obrigações (negativa)** (parametrizável).
+3. **Exposição:** três definições geradas em paralelo — **direta** (só `ITAUUNIBANCO PN N1 - ITUB4`), **long** (+ cedida em empréstimo) e **net** (+ obrigações, negativas). Primária = **net**; todas exportadas (`painel_itub4_{direta,long,net}.csv`).
 4. **Modelar a posição** (em R$/US$), que é não-estacionária → diferenciar; **não diferenciar o peso**
    (estacionário). Rodar ADF e reportar.
 5. **Manter os FICs** — a estrutura aninhada é o objeto de estudo, não ruído.
@@ -70,10 +70,11 @@ R 4.5.1 (fora do PATH nesta máquina):
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/99_run_all.R
 ```
 
-Compilar o documento:
+Compilar o documento (MiKTeX **sem Perl** → usar `pdflatex`+`bibtex`, não `latexmk`):
 
 ```powershell
-latexmk -pdf -cd docs/tcc.tex
+Set-Location docs
+pdflatex -interaction=nonstopmode tcc.tex; bibtex tcc; pdflatex -interaction=nonstopmode tcc.tex; pdflatex -interaction=nonstopmode tcc.tex
 ```
 
 ## Status

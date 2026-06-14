@@ -52,7 +52,7 @@ lente a exposição das gestoras a ações. A motivação teórica vem do \emph{
 propagar choques \citep{greenwoodthesmar2011}. Validamos o método com uma única ação, \textbf{ITUB4}, no
 período 2016--2021. A partir das bases públicas da CVM (composição de carteiras consolidada, ``CONS'', e
 série histórica, ``SH''), construímos um \emph{pipeline} modular em R que mede a exposição em \textbf{valor}
-(em R\$ e em US\$), na definição \textbf{net} (direta $+$ cedida em empréstimo $+$ obrigações), consolidando
+(em R\$ e em US\$), na definição \textbf{net} (direta $+$ cedida em empréstimo $+$ obrigações; também reportada como \texttt{direta} e \texttt{long}), consolidando
 entidades do mesmo grupo econômico e mantendo os fundos de cotas (FIC). Todas as afirmações sobre as bases
 foram verificadas contra os arquivos reais; reportamos cada diagnóstico e as discrepâncias encontradas. O
 painel final tem 2.835 observações gestora-mês (42 grupos econômicos, 72 meses). Documentamos ainda a
@@ -238,7 +238,7 @@ que jogam texto na coluna de valor. \textbf{Nenhuma é ITUB4}; o \emph{parser} r
 conteúdo numérico é, de fato, decimal americano. Ver \texttt{audit\_cons\_valor\_nao\_parseado.csv}.
 
 \begin{table}[H]\centering
-\caption{As três variantes de ITUB4 na CONS (2016--2021).}
+\caption{As três variantes de ITUB4 na CONS. Os valores são a \emph{soma} no período 2016--2021.}
 \label{tab:variants}
 \small
 \begin{tabular}{llrr}
@@ -255,7 +255,9 @@ obrigação & Obrigações por ações e outros TVM recebidos em empréstimo - I
 \paragraph{Cobertura e duplicação.} Em média 74,7\% dos fundos-mês da SH têm carteira na CONS no mesmo mês
 (o restante distingue ``ausência $=$ 0 real'' de ``NA''). Importante para o tema: \textbf{61,7\%} dos
 fundos-mês que detêm ITUB4 são FIC com ITUB4 ``direto'' (após a consolidação da CVM) --- isto é, a
-duplicação direta/indireta apontada pelo orientador é \textbf{material}.
+duplicação direta/indireta apontada pelo orientador é \textbf{material}. A mesma duplicação afeta o
+\emph{denominador} do peso (somar os PLs de FIC e master conta o mesmo patrimônio duas vezes) --- razão
+adicional para tratar o peso como descritivo e priorizar a posição.
 
 \paragraph{Estacionariedade (ADF).} Para as 40 gestoras com $\geq 24$ meses
 (Tabela~\ref{tab:adf}): a \textbf{posição em nível} é estacionária em apenas 6/40 (logo, majoritariamente
@@ -290,27 +292,27 @@ do painel em que o peso chegava a ${\sim}5\times10^{9}$ por um erro de \emph{par
 decimal). A Tabela~\ref{tab:top} lista as maiores gestoras por posição média em ITUB4 (US\$).
 
 \begin{table}[H]\centering
-\caption{Maiores gestoras por posição média em ITUB4 (US\$ milhares, exposição net).}
+\caption{Maiores gestoras por posição média mensal em ITUB4 (US\$ milhões, exposição net).}
 \label{tab:top}
 \small
 \begin{tabular}{lr}
 \toprule
-\textbf{Gestora (grupo)} & \textbf{Posição média (US\$ mil)} \\
+\textbf{Gestora (grupo)} & \textbf{Posição média (US\$ milhões)} \\
 \midrule
-Itaú & 499.548 \\
-Bradesco & 185.159 \\
-BB & 115.430 \\
-Kapitalo Investimentos & 108.869 \\
-Santander & 101.214 \\
-Occam Brasil & 66.943 \\
-SPX Capital & 54.626 \\
-BTG Pactual & 42.406 \\
+Itaú & 499,5 \\
+Bradesco & 185,2 \\
+BB & 115,4 \\
+Kapitalo Investimentos & 108,9 \\
+Santander & 101,2 \\
+Occam Brasil & 66,9 \\
+SPX Capital & 54,6 \\
+BTG Pactual & 42,4 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Sensibilidade à definição de exposição.} A Tabela~\ref{tab:expo} compara as três definições. A
-posição agregada cresce de R\$\,468,3 bi (direta) para R\$\,540,1 bi (long, somando as cedidas) e recua
+soma das posições mensais cresce de R\$\,468,3 bi (direta) para R\$\,540,1 bi (long, somando as cedidas) e recua
 para R\$\,496,5 bi na net (descontadas as obrigações). Sob a net, \textbf{264 de 2.835} observações
 gestora-mês (9,3\%) ficam \emph{net short} em ITUB4 (obrigações $>$ posições), o que nunca ocorre nas
 definições direta ou long --- evidência de que o empréstimo é material e de que vale reportar ambas as
@@ -318,16 +320,17 @@ visões. As figuras de posição e correlação são geradas para cada definiç�
 \texttt{\_direta}/\texttt{\_long}; abaixo, a net).
 
 \begin{table}[H]\centering
-\caption{Comparação das definições de exposição (2016--2021).}
+\caption{Comparação das definições de exposição. ``Soma'' = total das posições mensais sobre as 2.835
+observações gestora-mês (mesma convenção da Tabela~\ref{tab:variants}); ``média'' = por gestora-mês.}
 \label{tab:expo}
 \small
 \begin{tabular}{lrrrr}
 \toprule
-\textbf{Definição} & \textbf{Posição agreg.\ (R\$ bi)} & \textbf{Pos.\ média (US\$ mil)} & \textbf{Obs.\ net short} & \textbf{Peso máx.} \\
+\textbf{Definição} & \textbf{Soma pos.\ mensais (R\$ bi)} & \textbf{Pos.\ média (US\$ milhões)} & \textbf{Obs.\ net short} & \textbf{Peso máx.} \\
 \midrule
-direta & 468,3 & 38.996 & 0   & 21,0\% \\
-long   & 540,1 & 45.145 & 0   & 21,0\% \\
-net    & 496,5 & 41.359 & 264 & 21,0\% \\
+direta & 468,3 & 39,0 & 0   & 21,0\% \\
+long   & 540,1 & 45,1 & 0   & 21,0\% \\
+net    & 496,5 & 41,4 & 264 & 21,0\% \\
 \bottomrule
 \end{tabular}
 \end{table}

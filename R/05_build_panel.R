@@ -21,6 +21,10 @@ get_ptax <- function() {
 build_panel <- function(itub4_fm, sh_monthly, ptax_monthly, exposicao = EXPOSICAO) {
   sh <- copy(sh_monthly)
   sh[, gestora_grp := apply_group(gestora)]
+  # Blindagem: gestora em branco/NA vira NA (evita "grupo fantasma" se algum ano
+  # tiver GESTORA vazia). Nestes dados (2016-2021) não há nenhuma, então não muda
+  # os resultados; é proteção para extensões futuras.
+  sh[is.na(gestora) | trimws(gestora) == "", gestora_grp := NA_character_]
   sh[, pl_valido := is.finite(pl_mil) & pl_mil > 0]
 
   # Posição ITUB4 por fundo-mês, larga por variante.
