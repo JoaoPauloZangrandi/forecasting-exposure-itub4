@@ -28,6 +28,7 @@ R/                 pipeline modular em R
   07_correlation.R     matrizes de correlação entre gestoras + heatmap
   99_run_all.R         orquestra todos os módulos (só ITUB4)
   forecasting_scaffold.R   esqueleto de PCA/AR/VAR/GNN — NÃO É EXECUTADO
+  10_build_cda_edges.R     baixa a CDA Bloco 2 e extrai arestas fundo->fundo
 docs/              tcc.tex, refs.bib e tcc.pdf
 notebooks/         exploração
 outputs/figures/   gráficos (.png)
@@ -60,7 +61,12 @@ Chave de ligação: `Código` (CONS) == `COD_FUNDO` (SH) para o mesmo CNPJ.
 
 A CONS é **100% "Ações"**: as relações fundo→fundo foram apagadas pela consolidação. Para montar o
 grafo fundo-sobre-fundo (detecção de ciclos, profundidade, peso indireto) é preciso a base **CDA não
-consolidada** da CVM (bloco BLC de "Cotas de Fundos"). O plano para obtê-la está documentado no TCC.
+consolidada** da CVM (bloco BLC_2 de "Cotas de Fundos").
+
+**Atualização:** a CDA Bloco 2 (2016–2021) já foi baixada e as arestas fundo→fundo extraídas
+(`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora do git). Das cotas com origem nos
+nossos fundos, ~33% têm destino na amostra, ~32% são **confidenciais** (a CVM mascara o destino) e
+~35% apontam para fundos **externos** — o que delimita até onde o look-through é rastreável.
 
 ## Como rodar
 
