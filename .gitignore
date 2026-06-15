@@ -12,6 +12,10 @@ data/processed/_cache_*.rds
 # Lista de arestas da CDA (grande ~57 MB; regenerável por R/10_build_cda_edges.R).
 data/processed/cda_edges.csv
 
+# Extracts por fundo-mês (regeneráveis por R/_prep_fund_extracts.R).
+data/processed/itub4_fundmonth.csv
+data/processed/pl_fundmonth.csv
+
 # --- R ---
 .Rhistory
 .RData
