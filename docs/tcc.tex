@@ -57,9 +57,11 @@ entidades do mesmo grupo econômico e mantendo os fundos de cotas (FIC). Todas a
 foram verificadas contra os arquivos reais; reportamos cada diagnóstico e as discrepâncias encontradas. O
 painel final tem 2.835 observações gestora-mês (42 grupos econômicos, 72 meses). Documentamos ainda a
 \textbf{limitação crítica} de que a base CONS é integralmente consolidada em ações --- o que apaga as
-relações fundo$\to$fundo --- e o plano para obter a base não consolidada (CDA, Bloco 2: cotas de fundos) e
-montar o grafo fundo-sobre-fundo. Os modelos de previsão (PCA/análise fatorial e GNN) estão apenas
-\emph{planejados}; nenhum foi executado nesta fase.
+relações fundo$\to$fundo --- Em seguida \textbf{obtivemos} a base não consolidada (CDA, Bloco~2:
+cotas de fundos) e montamos o grafo fundo-sobre-fundo: não há estruturas circulares, o aninhamento chega a
+9 níveis, e a \textbf{dupla contagem interna} da exposição (FIC$+$master da mesma gestora) é de
+\textbf{37,6\%} no agregado (41,7\% para a Itaú). Os modelos de previsão (PCA/análise fatorial e GNN) estão
+apenas \emph{planejados}; nenhum foi executado nesta fase.
 
 \noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de investimento; fundos de cotas;
 exposição em ações; risco sistêmico de redes; CVM.
@@ -355,21 +357,61 @@ variação mensal da posição em US\$ (definição net) --- esta última explic
 
 A base CONS é \textbf{100\% ``Ações''}: a consolidação da CVM \emph{apagou} as relações fundo$\to$fundo (quem
 detém cotas de quem). Há uma ironia --- a consolidação que facilita medir a exposição em ações é a que
-destrói a estrutura que queremos estudar. Portanto, a partir da CONS \emph{não} é possível montar o grafo
+destrói a estrutura que queremos estudar. Portanto, a partir da CONS \emph{isolada} não é possível montar o grafo
 fundo-sobre-fundo, detectar estruturas circulares nem medir aninhamento.
 
-\paragraph{Solução (localizada).} A base \textbf{CDA não consolidada} da CVM \citep{cvm_cda} preserva essas
-relações. Em particular, o \textbf{Bloco~2 --- ``Cotas de Fundos de Investimento''} mantém as linhas em que
-um fundo detém cotas de outro fundo. Os arquivos mensais estão em
-\texttt{https://dados.cvm.gov.br/dados/FI/DOC/CDA/DADOS/cda\_fi\_AAAAMM.zip} (cada ZIP contém o arquivo do
-bloco, \texttt{cda\_fi\_BLC\_2\_AAAAMM.csv}). Os nomes exatos das colunas que identificam o fundo investido
-(CNPJ/nome da cota) serão confirmados no Dicionário de Dados da CVM (não os inventamos aqui).
+\paragraph{Solução obtida.} A base \textbf{CDA não consolidada} \citep{cvm_cda}, \textbf{Bloco~2 (``Cotas de
+Fundos'')}, preserva essas ligações --- e nós a obtivemos para 2016--2021. Os arquivos \emph{anuais} ficam na
+pasta \texttt{HIST} (\texttt{.../CDA/DADOS/HIST/cda\_fi\_AAAA.zip}); dentro, \texttt{cda\_fi\_BLC\_2\_AAAA.csv}
+traz uma linha por participação ``A detém cotas de B'', com \texttt{CNPJ\_FUNDO} (quem detém),
+\texttt{CNPJ\_FUNDO\_COTA} (fundo investido) e \texttt{VL\_MERC\_POS\_FINAL} (valor). Lemos o bloco em
+\emph{streaming} de dentro do ZIP (restrição de disco) e extraímos \textbf{835.694 arestas} com origem nos
+fundos da amostra.
 
-\paragraph{Desenho do grafo.} Nó $=$ fundo (CNPJ); aresta direcionada ``detém cotas de'', ponderada pelo
-valor investido. Sobre esse grafo: (i)~\emph{detecção de ciclos} (estruturas circulares) com
-\texttt{igraph}; (ii)~\emph{profundidade de aninhamento} (distância FIC$\to$master$\to$ação);
-(iii)~\emph{peso indireto} (exposição look-through a uma ação via cotas). Essas métricas são o ``coração''
-do risco fundo-sobre-fundo e ligam-se ao painel de exposição já construído.
+\paragraph{Cobertura e limites.} Das arestas com origem na amostra: \textbf{33\%} têm destino \emph{também}
+na amostra (cadeia rastreável), \textbf{32\%} são \emph{confidenciais} (a CVM mascara o destino por até
+$\sim$90 dias) e \textbf{35\%} apontam para fundos \emph{externos}. O terço externo \emph{não} compromete a
+medição de ITUB4 --- a CONS já enxerga através desses masters ---, apenas limita o desenho explícito da rede.
+Empiricamente, \textbf{33,7\%} das cotas com destino na amostra vão para \emph{outra} gestora, confirmando
+que FICs investem entre casas (no espírito das plataformas de \citealp{ferraresi_replicant}).
+
+\paragraph{Estrutura: ciclos e aninhamento.} Sobre o grafo direcionado (nó $=$ fundo, aresta $=$ ``detém
+cotas de'') com \texttt{igraph}: em \textbf{nenhum} dos 72 meses há estrutura circular (grafo sempre acíclico,
+coerente com a vedação regulatória a participações circulares), mas o \textbf{aninhamento é profundo} --- a
+cadeia mais longa tem mediana de 7 e máximo de 9 níveis.
+
+\paragraph{Look-through de-duplicado (o ``coração'').} Somar a ITUB4 entre fundos da mesma gestora
+\emph{dupla-conta}: se A detém a fração $\phi_{A\to B}=v_{A\to B}/PL_B$ de B, a exposição consolidada de A já
+inclui $\phi_{A\to B}\,L_B$, que também está em $L_B$. Removendo a sobreposição interna,
+\[ \text{dedup}_g \;=\; \sum_{i\in g} L_i \;-\!\!\! \sum_{A\to B\;\text{em }g}\!\!\! \phi_{A\to B}\,L_B . \]
+No agregado, a exposição bruta de R\$\,496,5 bi cai para R\$\,309,8 bi: a \textbf{dupla contagem interna é
+37,6\%} (Tabela~\ref{tab:dedup}); para a Itaú, 41,7\% (Figura~\ref{fig:dedup}). É a evidência direta de que
+as estruturas fundo-sobre-fundo inflam materialmente a exposição aparente das gestoras.
+
+\begin{table}[H]\centering
+\caption{ITUB4 bruta vs de-duplicada (posição média mensal, R\$ milhões) e \% de dupla contagem interna.}
+\label{tab:dedup}
+\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Gestora} & \textbf{Bruta} & \textbf{De-dup} & \textbf{Dupla cont.} \\
+\midrule
+Itaú                   & 2.128,8 & 1.200,1 & 41,7\% \\
+Bradesco               &   758,4 &   510,8 & 32,5\% \\
+BB                     &   491,2 &   314,3 & 35,4\% \\
+Kapitalo Investimentos &   454,7 &   258,6 & 43,4\% \\
+Santander              &   426,7 &   279,5 & 32,2\% \\
+Guepardo Investimentos &   220,3 &    96,8 & 55,7\% \\
+SPX Capital            &   201,8 &    95,7 & 53,7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.9\textwidth]{itub4_dedup_itau.png}
+\caption{Itaú: ITUB4 bruta vs de-duplicada (remove a dupla contagem interna FIC$\to$master).}
+\label{fig:dedup}
+\end{figure}
 
 % =================================================================
 \section{Plano de previsão (não executado)}\label{sec:forecast}
@@ -392,8 +434,8 @@ Métricas: RMSE/MAE \emph{out-of-sample} e comparação entre modelos (p.ex.\ Di
 Esta fase entregou um \emph{pipeline} reprodutível e \emph{validado contra os dados reais} para a exposição
 de gestoras a ITUB4 (em R\$ e US\$, net, com grupos consolidados e FIC mantidos), com diagnósticos completos
 e a correção de um erro de \emph{parsing} que corrompia uma versão anterior do painel. Os próximos passos,
-\emph{a pedido explícito}, são: (1)~obter a base CDA (Bloco~2) e construir o grafo fundo-sobre-fundo;
-(2)~estender o pipeline a todas as ações; (3)~executar os modelos de previsão. Nada disso foi feito ainda.
+\emph{a pedido explícito}, são: (1)~estender o pipeline a todas as ações; (2)~executar os modelos de previsão. A base CDA (Bloco~2) e o
+grafo fundo-sobre-fundo já foram construídos (Seção~\ref{sec:limitacao}); esses dois é que ainda faltam.
 
 \paragraph{Pontos a confirmar com o orientador.} (i)~citação exata de \emph{Replicant Investment Platforms};
 (ii)~definição de exposição padrão (mantemos \texttt{net}); (iii)~tratamento da duplicação via FIC à luz dos
