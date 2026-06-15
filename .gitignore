@@ -16,6 +16,9 @@ data/processed/cda_edges.csv
 data/processed/itub4_fundmonth.csv
 data/processed/pl_fundmonth.csv
 
+# Painel de TODAS as ações (grande; regenerável por R/12_all_stocks.R).
+data/processed/painel_all_stocks.csv
+
 # --- R ---
 .Rhistory
 .RData
