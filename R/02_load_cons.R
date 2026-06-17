@@ -30,6 +30,11 @@ load_cons_year <- function(yr) {
     valor_mil = parse_decimal_number(valor_raw)
   )]
 
+  # Remove linhas EXATAMENTE duplicadas (mesmo fundo/data/ativo/valor) — artefatos
+  # de exportacao da CVM (~0,2% das linhas; impacto ~0,01% nos totais). Lotes
+  # legitimos (mesmo ativo, VALOR diferente) sao preservados e somados.
+  dt <- unique(dt, by = c("cnpj", "codigo_fundo", "data", "nome_ativo", "valor_mil"))
+
   tipo_audit <- dt[, .(n_rows = .N), by = tipo_ativo][, ano := yr][]
 
   cons_diag <- data.table(

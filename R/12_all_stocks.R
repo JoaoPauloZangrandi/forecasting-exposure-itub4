@@ -30,6 +30,7 @@ process_year <- function(yr) {
   setnames(dt, c("cnpj_raw","codigo_fundo","tipo_ativo","data","nome_ativo","valor_raw"))
   dt[, `:=`(cnpj = normalize_cnpj(cnpj_raw), codigo_fundo = as.character(codigo_fundo),
             data = as.Date(as.character(data)), valor_mil = parse_decimal_number(valor_raw))]
+  dt <- unique(dt, by = c("cnpj", "codigo_fundo", "data", "nome_ativo", "valor_mil"))  # remove duplicatas exatas
   up <- toupper(dt$nome_ativo)                      # ticker é ASCII; evita iconv
   dt[, ticker := trimws(str_extract(up, "[A-Z]{4}[0-9]{1,2}\\s*$"))]
   n_raw <- nrow(dt)

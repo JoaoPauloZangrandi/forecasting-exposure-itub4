@@ -1,0 +1,272 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks]{hyperref}
+\graphicspath{{../outputs/figures/}}
+\setlength{\parskip}{0.4em}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{document}
+
+% ----------------------------------------------------------------- CAPA
+\begin{titlepage}
+\centering
+\vspace*{1cm}
+{\scshape\large Fundação Getulio Vargas \\ Escola de Economia de São Paulo (EESP)\par}
+\vspace{2.5cm}
+{\huge\bfseries Forecasting da exposição de gestoras de ações e o risco de estruturas fundo-sobre-fundo\par}
+\vspace{0.8cm}
+{\Large Da medição da exposição (R\$/US\$) ao grafo fundo-sobre-fundo e à previsibilidade da demanda --- evidência do mercado brasileiro de fundos, 2016--2021\par}
+\vspace{3cm}
+{\Large João Paulo Zangrandi\par}
+\vspace{0.5cm}
+{\large Orientador: Prof.\ Maurício Ferraresi Junior\par}
+\vfill
+{\large São Paulo \\ \today\par}
+\end{titlepage}
+
+% --------------------------------------------------------------- RESUMO
+\chapter*{Resumo}
+\addcontentsline{toc}{chapter}{Resumo}
+Este trabalho mede a exposição das gestoras brasileiras a ações e investiga o risco das estruturas
+``fundo-sobre-fundo'' (fundos de cotas, FIC, que investem em outros fundos que detêm ações), sob a ótica do
+\emph{demand-based asset pricing} \citep{koijenyogo2019,gabaixkoijen2021}. A partir das bases públicas da CVM
+--- composição consolidada de carteiras (CONS), série histórica (SH) e a base não consolidada de cotas de
+fundos (CDA, Bloco~2) --- construímos um \emph{pipeline} reprodutível em R que mede a exposição em
+\textbf{valor} (R\$ e US\$), na definição \emph{net}, consolidando grupos econômicos e mantendo os FICs.
+Três contribuições: (i)~um painel gestora $\times$ mês $\times$ ação validado contra os dados reais
+(ITUB4 e 836 ações, 2016--2021); (ii)~a reconstrução do \textbf{grafo fundo-sobre-fundo} a partir da CDA, com
+o achado de que a \textbf{dupla contagem interna} de exposição (FIC$+$master da mesma gestora) é
+\textbf{estrutural, $\approx 37\%$} --- estável entre ações e gestoras --- enquanto não há estruturas
+circulares e o aninhamento chega a 9 níveis; e (iii)~uma avaliação \emph{out-of-sample} de previsibilidade,
+mostrando que a \emph{variação} mensal da exposição é essencialmente imprevisível (martingale), ao passo que
+o \emph{nível} reverte à média de forma previsível ($\sim$10\% sobre o \emph{random walk}) apenas nas
+\emph{blue chips} mais concentradas. A rede não acrescenta poder preditivo, mas é decisiva para \emph{medir}
+o risco. As ações mais ``concentradas'' (detidas por todas as gestoras) são as mesmas mais frágeis no sentido
+de \citet{greenwoodthesmar2011}.
+
+\noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de cotas; exposição em ações;
+risco sistêmico de redes; previsibilidade; CVM.
+
+\tableofcontents
+
+% =================================================================
+\chapter{Introdução}\label{cap:intro}
+O mercado brasileiro de fundos é densamente \textbf{aninhado}: fundos de cotas (FIC) investem em outros
+fundos que, por sua vez, detêm ações. Compreender o \textbf{risco} dessas estruturas ``fundo-sobre-fundo''
+--- e quanto da exposição agregada das gestoras é genuína \emph{vs.}\ artefato de participações sobre
+participações --- é o objetivo central deste trabalho. A lente é a \textbf{exposição das gestoras a ações};
+validamos o método com uma ação (ITUB4, Itaú Unibanco PN) e o estendemos a todas.
+
+A motivação teórica é o \emph{demand-based asset pricing}: \citet{koijenyogo2019} formalizam a formação de
+preços pela demanda dos investidores institucionais, e \citet{gabaixkoijen2021} mostram que o mercado é
+inelástico, de modo que fluxos têm impacto desproporcional. Se a demanda das gestoras tem estrutura, ela é
+em parte previsível e pode se propagar; \citet{greenwoodthesmar2011} ligam a sobreposição de propriedade à
+\emph{fragilidade de preços}. Daí três perguntas: \textbf{(1)} como medir corretamente a exposição (em valor,
+sem dupla contagem)? \textbf{(2)} qual a estrutura da rede fundo-sobre-fundo e quanto ela infla a exposição
+aparente? \textbf{(3)} a exposição é previsível?
+
+\paragraph{Contribuições.} (i)~Pipeline validado de exposição (R\$/US\$, net, grupos, FICs) para ITUB4 e
+836 ações; (ii)~reconstrução do grafo fundo-sobre-fundo (CDA Bloco~2) e quantificação da dupla contagem
+estrutural ($\approx 37\%$); (iii)~avaliação \emph{out-of-sample} da previsibilidade da exposição.
+
+% =================================================================
+\chapter{Revisão bibliográfica}\label{cap:rev}
+\textbf{Demand-based asset pricing.} \citet{koijenyogo2019} estimam um sistema de demanda a partir de
+carteiras institucionais; \citet{gabaixkoijen2021} quantificam a baixa elasticidade do mercado agregado.
+\textbf{Propriedade comum e fragilidade.} \citet{greenwoodthesmar2011} introduzem medidas de fragilidade
+baseadas na concentração e correlação da propriedade --- diretamente aplicáveis à sobreposição de carteiras
+e à duplicação via FIC. \textbf{Métodos.} Fatores latentes via PCA/análise fatorial seguem
+\citet[cap.\ 3--4]{artesbarroso2023}; a rede de fundos como grafo remete a \citet{sanchezlengeling2021}.
+\textbf{Plataformas.} A referência central do orientador é \emph{Replicant Investment Platforms}
+\citep{ferraresi_replicant}, que trata plataformas (vasos que investem entre gestoras) como unidade de
+análise --- diretamente relacionado ao nosso achado de que FICs investem amplamente entre casas.
+
+% =================================================================
+\chapter{Dados}\label{cap:dados}
+Três bases públicas da CVM, 2016--2021, separador ``\texttt{;}''.
+
+\paragraph{CONS --- composição consolidada (\emph{holdings}).} Granularidade fundo $\times$ mês $\times$
+ativo ($\sim$21,1 milhões de linhas). Valores em \textbf{formato americano} (ponto decimal); a base é
+\textbf{100\% ``Ações''} --- a consolidação da CVM dissolve as cotas em ações. Três variantes por ticker:
+direta, cedida em empréstimo e obrigações (aluguel tomado, negativa). Cobertura de \emph{ticker}: $\sim$99\%
+($\sim$1\% são ações de companhia fechada, sem código).
+
+\paragraph{SH --- série histórica.} Granularidade fundo $\times$ dia; traz a \textbf{gestora} e o \textbf{PL}.
+Formato brasileiro (\texttt{R\$ 49.749,57}). 50 gestoras e 52,6\% de linhas FIC em 2016.
+
+\paragraph{CDA --- Bloco~2 (cotas de fundos), não consolidada.} Preserva as relações fundo$\to$fundo que a
+CONS apaga: cada linha é ``A detém cotas de B'' (\texttt{CNPJ\_FUNDO}, \texttt{CNPJ\_FUNDO\_COTA},
+\texttt{VL\_MERC\_POS\_FINAL}). Extraímos \textbf{835.694 arestas} com origem nos fundos da amostra.
+
+\paragraph{Ligação.} \texttt{Código} (CONS) $=$ \texttt{COD\_FUNDO} (SH) por CNPJ (verificado: apenas 2
+fundos-mês da CONS sem correspondência no SH; \emph{overlap} de CNPJ $\approx 100\%$).
+
+\section{Revisão de qualidade das bases}\label{sec:qualidade}
+Auditamos cada afirmação contra os dados reais (Tabela~\ref{tab:qual}). Destaques: a CONS é 100\% ``Ações''
+em todos os anos e os valores estão de fato em formato americano (uma versão anterior do painel estava
+corrompida por um erro de \emph{parsing} que removia o ponto decimal --- corrigido). Encontramos $\sim$0,2\%
+de \textbf{linhas exatamente duplicadas} (mesmo fundo/data/ativo/valor; artefatos de exportação), que
+deduplicamos --- impacto de $\approx 0{,}01\%$ nos totais. No SH, \emph{nenhum} CNPJ tem mais de uma classe
+e \emph{nenhum} fundo troca de gestora, o que valida a consolidação por grupo e afasta dupla contagem de PL.
+Dos fundos do SH sem carteira na CONS (cobertura média 74,8\%), \textbf{94,7\% não são fundos de ações}
+(renda fixa/multimercado) --- ausência esperada. Na CDA, a fração de propriedade
+$\phi=\text{valor}/PL_{\text{destino}}$ tem mediana 0,008 e fica em $(0,1]$ em 98,4\% dos casos, validando as
+unidades e a de-duplicação; não há \emph{self-loops}.
+
+\begin{table}[H]\centering
+\caption{Revisão das bases (2016--2021): fato e resultado.}
+\label{tab:qual}
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Verificação} & \textbf{Resultado} \\
+\midrule
+CONS 100\% ``Ações''                 & sim, todos os anos \\
+Magnitudes 2016 (net ITUB4)          & direta R\$\,35,4 bi; cedida R\$\,9,6 bi; obrig.\ $-$R\$\,5,8 bi \\
+Linhas exatamente duplicadas         & $\sim$0,2\% (deduplicadas; impacto $\approx$0,01\%) \\
+SH: classes por CNPJ / troca gestora & 1 / 0 (sem dupla contagem de PL; grupos estáveis) \\
+Cobertura SH em CONS                 & 74,8\%; 94,7\% dos ausentes não são de ações \\
+Chave Código $=$ COD\_FUNDO          & sim (2 fundos-mês sem match) \\
+CDA: $\phi$ (propriedade)            & mediana 0,008; 98,4\% em $(0,1]$; 0 \emph{self-loops} \\
+CDA: confidenciais / externos        & 32\% mascarados; 35\% destino externo \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =================================================================
+\chapter{Metodologia}\label{cap:metodo}
+\textbf{Unidade:} gestora, consolidada por grupo econômico (Itaú, BTG, XP\ldots), via regex sobre o nome
+normalizado. \textbf{Medida:} valor (não quantidade), em R\$ e US\$ (PTAX fim de mês, BCB SGS série~1).
+\textbf{Exposição:} três definições, geradas em paralelo --- \texttt{direta} (só a linha direta),
+\texttt{long} ($+$cedida) e \texttt{net} ($+$obrigações); a primária é a \emph{net}. \textbf{FICs mantidos}
+(a estrutura aninhada é o objeto). \textbf{Estacionariedade:} modela-se a posição (não-estacionária $\to$
+diferenciar) e seu nível; o peso é descritivo; ADF reportado.
+
+\paragraph{Grafo fundo-sobre-fundo.} Nó $=$ fundo; aresta direcionada ``detém cotas de'' (CDA), ponderada
+pelo valor. Métricas: detecção de ciclos, profundidade de aninhamento e \textbf{look-through de-duplicado}.
+
+\paragraph{De-duplicação.} Somar a exposição entre fundos da mesma gestora dupla-conta: se A detém a fração
+$\phi_{A\to B}=v_{A\to B}/PL_B$ de B, a exposição consolidada de A já inclui $\phi_{A\to B}L_B$, que também
+está em $L_B$. Logo
+\[ \text{dedup}_g = \sum_{i\in g} L_i - \!\!\sum_{A\to B\,\in g}\!\! \phi_{A\to B}\,L_B . \]
+
+\paragraph{Forecasting.} Avaliação \emph{out-of-sample} com origem móvel (janela expansível), 1 passo, sem
+vazamento, contra o \emph{random walk}; métricas RMSE/MAE (\emph{skill} vs RW) e acerto de direção.
+
+% =================================================================
+\chapter{Resultados}\label{cap:result}
+
+\section{Exposição das gestoras}\label{sec:exp}
+O painel (ITUB4) tem 2.835 observações gestora-mês (42 grupos, 72 meses); o peso varia entre $-6\%$ e
+$+21\%$ (mediana 0,84\%). As maiores posições são de Itaú ($\sim$US\$\,500 mi médios), Bradesco, BB,
+Kapitalo e Santander (Figura~\ref{fig:pos}). A Tabela~\ref{tab:expo} compara as definições: a soma das
+posições mensais vai de R\$\,468 bi (direta) a R\$\,540 bi (long) e R\$\,496 bi (net); sob a net, 264 das
+2.835 observações ficam \emph{net short} (aluguel $>$ posição), o que nunca ocorre nas demais.
+
+\begin{table}[H]\centering
+\caption{Definições de exposição (ITUB4): soma das posições mensais e \emph{net short}.}
+\label{tab:expo}
+\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Definição} & \textbf{Soma (R\$ bi)} & \textbf{Pos.\ média (US\$ mi)} & \textbf{Obs.\ net short} \\
+\midrule
+direta & 468 & 39,0 & 0 \\
+long   & 540 & 45,1 & 0 \\
+net    & 496 & 41,4 & 264 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.88\textwidth]{pos_usd_top_gestoras.png}
+\caption{Posição em ITUB4 por gestora (US\$ milhões, net).}
+\label{fig:pos}
+\end{figure}
+
+\section{O grafo fundo-sobre-fundo}\label{sec:grafo}
+Sobre o grafo direcionado (\texttt{igraph}): em \textbf{nenhum} dos 72 meses há estrutura circular (sempre
+acíclico, coerente com a vedação regulatória), mas o \textbf{aninhamento é profundo} --- a cadeia mais longa
+tem mediana 7 e máximo 9 níveis. O resultado central é a \textbf{dupla contagem}: a exposição bruta de ITUB4
+(R\$\,496 bi) cai para R\$\,310 bi de-duplicada --- \textbf{37,6\%} de duplicação interna; para a Itaú, 41,7\%
+(Figura~\ref{fig:dedup}). Empiricamente, \textbf{33,7\%} das cotas com destino na amostra vão para
+\emph{outra} gestora, confirmando que FICs investem entre casas (plataformas; \citealp{ferraresi_replicant}).
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.85\textwidth]{itub4_dedup_itau.png}
+\caption{Itaú: ITUB4 bruta vs de-duplicada (remove a dupla contagem interna FIC$\to$master).}
+\label{fig:dedup}
+\end{figure}
+
+\section{Generalização e concentração}\label{sec:geral}
+Estendendo a \textbf{836 ações}, a duplicação é \textbf{estrutural}: a exposição total em ações cai de
+R\$\,14,3 tri (bruta) para R\$\,8,9 tri (de-dup), \textbf{37,4\%} --- praticamente igual ao ITUB4 --- e o
+número se repete ação a ação (a maioria entre 30\% e 42\%). As ações detidas por \textbf{todas} as 42
+gestoras são as \emph{blue chips} (VALE3, PETR4, ITUB4, BBDC4, EQTL3\ldots), exatamente as mais frágeis no
+sentido de \citet{greenwoodthesmar2011} (Figura~\ref{fig:crowd}).
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.8\textwidth]{stock_crowding_top15.png}
+\caption{Ações detidas pelo maior número de gestoras (\emph{crowding}).}
+\label{fig:crowd}
+\end{figure}
+
+\section{Previsibilidade da exposição}\label{sec:fc}
+Cinco rodadas \emph{out-of-sample} (Tabela~\ref{tab:fc}): a \textbf{variação} mensal da posição é
+\textbf{imprevisível} (nenhum modelo bate o RW; direção 50,8\%, cara-ou-coroa). Mudando o alvo para o
+\textbf{nível}, surge previsibilidade por \textbf{reversão à média} (AR bate o RW em $\sim$10\% para ITUB4).
+\textbf{Features de rede} não acrescentam ($\gamma\approx0$) --- um GNN seria improvável de ajudar a
+\emph{prever}. Ao generalizar para 238 ações, a previsibilidade \textbf{não é geral}: concentra-se nas
+\emph{blue chips} (ITUB4 entre as 3 mais previsíveis; mediana $-13{,}5\%$, Figura~\ref{fig:fc}).
+
+\begin{table}[H]\centering
+\caption{Previsibilidade da exposição (\emph{skill} vs random walk).}
+\label{tab:fc}
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Alvo / pergunta} & \textbf{Resultado} \\
+\midrule
+Variação mensal ($\Delta$ posição US\$) & imprevisível; RW imbatível; direção 50,8\% \\
+Nível da posição (ITUB4)         & previsível: AR $+\sim$10\% vs RW (reversão à média) \\
+Peso                             & $\approx$ random walk \\
+Features de rede (vizinhos)      & não acrescentam ($\gamma\approx0$) \\
+Generalização (238 ações)        & só nas \emph{blue chips} (ITUB4 top-3; mediana $-13{,}5\%$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.82\textwidth]{forecast_round5_skill_hist.png}
+\caption{\emph{Skill} do forecast de nível por ação (238 ações). Linha vermelha $=$ ITUB4.}
+\label{fig:fc}
+\end{figure}
+
+% =================================================================
+\chapter{Discussão e conclusão}\label{cap:disc}
+Os resultados formam um quadro coerente. \textbf{Medição:} a exposição institucional, somada ingenuamente,
+é superestimada em $\sim$37\% pela dupla contagem fundo-sobre-fundo --- um viés estrutural que qualquer
+exercício de demand-based asset pricing baseado em \emph{holdings} de fundos deveria corrigir. \textbf{Risco:}
+a rede é acíclica mas profundamente aninhada, e a concentração nas \emph{blue chips} cria o canal de
+fragilidade (demanda sobreposta $+$ estruturas aninhadas). \textbf{Previsão:} a demanda muda de forma
+quase imprevisível no curto prazo; o componente previsível é a reversão a uma \emph{alocação-alvo},
+concentrada justamente nos papéis mais \emph{crowded} --- onde também mora o risco. Notavelmente, a rede
+fundo-sobre-fundo é \textbf{essencial para medir o risco}, mas \textbf{não para prever} a exposição.
+
+\paragraph{Limitações.} Painel curto (72 meses) e frequência mensal; $\sim$32\% das cotas são confidenciais
+e $\sim$35\% apontam para fundos externos (não afetam a medição de exposição --- a CONS vê através ---, mas
+limitam o desenho explícito da rede); validação centrada nas \emph{blue chips}. \textbf{Próximos passos:}
+modelar a alocação-alvo (meia-vida da reversão); aprofundar métricas de risco da rede; e estender a previsão.
+Todo o \emph{pipeline} (R) é reprodutível e versionado.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+\end{document}

@@ -1,0 +1,14 @@
+[CONS] 100% Acoes todos os anos: TRUE
+[CONS] linhas de ativo DUPLICADAS (cnpj,cod,data,nome): 41437 (extra=41495) | ITUB4 dup: 216
+[CONS] cobertura de ticker: 98.93%-99.82% | valores negativos/ano ~663828 (obrigacoes)
+[CONS] obrigacoes NEGATIVAS todo ano: TRUE (qq positiva? 33)
+[CONS] maior valor de uma linha: R$ 19.7 bi
+[SH] CNPJ com >1 classe (codigo): 0 (max 1) -> PL somado pode contar classes do mesmo fundo
+[SH] fundos que TROCAM de gestora no tempo: 0
+[SH] PL <=0 ou NA (fundo-mes): 289 de 166684
+[SH] duplicatas (data,codigo,cnpj): 0
+[JOIN] CONS sem SH: 2 | SH sem CONS: 42024 | cobertura SH-em-CONS: 74.8%
+[JOIN] SH sem CONS: 94.7% NAO sao de acoes (RF/MM/etc.) -> ausencia esperada
+[CDA] self-loops (fundo detem a propria cota): 0
+[CDA] phi=valor/PL_destino: mediana 0.008 | % em (0,1]: 98.4% | % >1 (capado): 1.5%
+[CDA] confidenciais: 32.3% das arestas (origem no universo)
