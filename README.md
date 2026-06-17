@@ -39,7 +39,7 @@ R/                 pipeline modular em R
   18_data_review.R         revisão profunda das bases e auditorias
   19_half_life.R           meia-vida de reversão à alocação-alvo
   forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
-docs/              tcc_final.tex/pdf (principal), complementos e refs.bib
+docs/              tcc.tex/pdf (TCC único), refs.bib e guia_tecnico_projeto.md
 notebooks/         exploração
 outputs/figures/   gráficos (.png)
 outputs/tables/    tabelas de auditoria (.csv)
@@ -128,8 +128,10 @@ Compilar o documento (MiKTeX **sem Perl** → usar `pdflatex`+`bibtex`, não `la
 
 ```powershell
 Set-Location docs
-pdflatex -interaction=nonstopmode tcc_final.tex; bibtex tcc_final; pdflatex -interaction=nonstopmode tcc_final.tex; pdflatex -interaction=nonstopmode tcc_final.tex
+pdflatex -interaction=nonstopmode tcc.tex; bibtex tcc; pdflatex -interaction=nonstopmode tcc.tex; pdflatex -interaction=nonstopmode tcc.tex
 ```
+
+Para entender o projeto em nível operacional, use `docs/guia_tecnico_projeto.md`.
 
 ## Status
 
