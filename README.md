@@ -16,7 +16,7 @@ co-movimento) e, portanto, é parcialmente previsível — e estruturas aninhada
 
 ```
 data/raw/          CSV originais da CVM — NÃO versionados (ver data/raw/README.md)
-data/processed/    bases tratadas (painel_itub4.csv)
+data/processed/    bases tratadas versionadas e extracts grandes regeneráveis
 R/                 pipeline modular em R
   00_config.R          parâmetros (DATA_DIR, anos, ticker, modo de exposição, grupos)
   01_utils.R           parsers e helpers (número, CNPJ, ticker, desacentuação)
@@ -26,9 +26,18 @@ R/                 pipeline modular em R
   05_build_panel.R     painel gestora×mês: posição R$ e US$ (PTAX), peso, deltas, ADF
   06_diagnostics.R     validação dos fatos das bases + cobertura + duplicação FIC
   07_correlation.R     matrizes de correlação entre gestoras + heatmap
-  99_run_all.R         orquestra todos os módulos (só ITUB4)
-  forecasting_scaffold.R   esqueleto de PCA/AR/VAR/GNN — NÃO É EXECUTADO
+  99_run_all.R         orquestra os módulos-base de exposição (só ITUB4)
   10_build_cda_edges.R     baixa a CDA Bloco 2 e extrai arestas fundo->fundo
+  11_fund_graph.R          sumariza a rede fundo-sobre-fundo
+  12_all_stocks.R          generaliza o painel e a de-duplicação para todas as ações
+  13_forecast_itub4.R      primeira rodada de forecasting para ITUB4
+  14_forecast_round2.R     robustez: PCA menor, AR encolhido, MAE e direção
+  15_forecast_round3.R     previsibilidade de nível e horizontes 1/3/6 meses
+  16_forecast_round4.R     teste de features de rede no forecast
+  17_forecast_round5.R     forecast de nível para todas as ações elegíveis
+  18_data_review.R         revisão profunda das bases e auditorias
+  19_half_life.R           meia-vida de reversão à alocação-alvo
+  forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
 docs/              tcc.tex, refs.bib e tcc.pdf
 notebooks/         exploração
 outputs/figures/   gráficos (.png)
@@ -37,7 +46,9 @@ outputs/tables/    tabelas de auditoria (.csv)
 
 ## Dados
 
-Origem: CVM. Duas bases por ano (2016–2021), formato `;`, UTF-8:
+Origem: CVM. Duas bases por ano (2016–2021), formato `;`, UTF-8. Os arquivos brutos
+ficam fora do git. O caminho padrão está em `R/00_config.R`, mas pode ser sobrescrito
+sem editar o código via variável de ambiente `CVM_DATA_DIR`.
 
 - **CONS** (`cons_YYYY.csv`): composição consolidada de carteiras (fundo × mês × ativo). Números
   em **formato americano** (ponto decimal, inclusive notação científica) — parse robusto; 22 linhas
@@ -70,10 +81,38 @@ nossos fundos, ~33% têm destino na amostra, ~32% são **confidenciais** (a CVM 
 
 ## Como rodar
 
-R 4.5.1 (fora do PATH nesta máquina):
+R 4.5.1 (fora do PATH nesta máquina). Pacotes usados: `data.table`, `stringr`, `jsonlite`,
+`ggplot2`, `tseries` e `igraph`.
+
+```r
+install.packages(c("data.table", "stringr", "jsonlite", "ggplot2", "tseries", "igraph"))
+```
+
+Se os dados brutos estiverem em outra pasta:
+
+```powershell
+$env:CVM_DATA_DIR = "D:\dados_cvm\Consolidado_MF"
+```
+
+Pipeline-base de ITUB4:
 
 ```powershell
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/99_run_all.R
+```
+
+Extensão para todas as ações, rede e forecast:
+
+```powershell
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/10_build_cda_edges.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/_prep_fund_extracts.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/12_all_stocks.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/13_forecast_itub4.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/14_forecast_round2.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/15_forecast_round3.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/16_forecast_round4.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/17_forecast_round5.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/18_data_review.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
 ```
 
 Compilar o documento (MiKTeX **sem Perl** → usar `pdflatex`+`bibtex`, não `latexmk`):
@@ -85,5 +124,12 @@ pdflatex -interaction=nonstopmode tcc.tex; bibtex tcc; pdflatex -interaction=non
 
 ## Status
 
-Fase atual: setup, validação das bases, pipeline da exposição (ITUB4) e documento. **Os modelos de
-forecasting (PCA/GNN) estão preparados mas NÃO foram executados** — aguardando autorização.
+Fase atual: pipeline de exposição validado para ITUB4, extensão para todas as ações, revisão profunda
+das bases, de-duplicação de estruturas fundo-sobre-fundo e rodadas de forecasting já executadas.
+
+Resultado central das rodadas de previsão: a variação mensal da posição em ITUB4 é difícil de bater
+contra random walk; a previsibilidade aparece melhor no **nível** da exposição, com reversão à média
+e meia-vida interpretável. Na rodada com todas as ações, ITUB4 fica entre as ações com skill positivo
+do AR contra random walk, mas o sinal é heterogêneo por ticker. As features de rede foram testadas
+como preditor incremental e não acrescentaram ganho material sobre o AR de painel na especificação
+atual.

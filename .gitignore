@@ -1,7 +1,7 @@
 # =============================================================================
 # Dados brutos da CVM — grandes (~4,2 GB), NÃO versionar.
-# Ficam em C:\Users\joaoz\Downloads\Consolidado_MF\Consolidado_MF e são
-# referenciados por DATA_DIR em R/00_config.R. Ver data/raw/README.md.
+# Ficam fora do repo e são referenciados por DATA_DIR em R/00_config.R.
+# Para usar outra pasta, defina CVM_DATA_DIR. Ver data/raw/README.md.
 # =============================================================================
 data/raw/*.csv
 data/raw/**/*.csv

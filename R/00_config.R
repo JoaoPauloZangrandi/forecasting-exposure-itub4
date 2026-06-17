@@ -5,7 +5,10 @@
 # =============================================================================
 
 # --- Onde estão os CSV brutos da CVM (fora do git; ver data/raw/README.md) ---
-DATA_DIR <- "C:/Users/joaoz/Downloads/Consolidado_MF/Consolidado_MF"
+# Use a variável de ambiente CVM_DATA_DIR para rodar em outra máquina sem editar
+# o código. O caminho abaixo é mantido como fallback para a estação original.
+DATA_DIR_DEFAULT <- "C:/Users/joaoz/Downloads/Consolidado_MF/Consolidado_MF"
+DATA_DIR <- Sys.getenv("CVM_DATA_DIR", unset = DATA_DIR_DEFAULT)
 
 # --- Período e ativo-alvo ---
 YEARS         <- 2016:2021
