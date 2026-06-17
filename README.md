@@ -1,14 +1,15 @@
-# Forecasting da exposição de gestoras de ações e o risco de estruturas fundo-sobre-fundo
+# Forecasting da exposição de gestoras de ações
 
 Trabalho de Conclusão de Curso (FGV EESP) — orientador Prof. Maurício Ferraresi Jr.
 
-O objetivo central é **medir e inferir o risco de estruturas "fundo-sobre-fundo"** (fundos de
-cotas que investem em outros fundos que detêm ações) no mercado brasileiro, usando como **lente
-a exposição das gestoras a ações**. O método é validado com **uma ação (ITUB4 — Itaú Unibanco PN)**
-antes de estender para as demais. A motivação teórica vem de *demand-based asset pricing*: os preços
-se formam em parte pela demanda dos investidores institucionais, que tem estrutura (inércia,
-co-movimento) e, portanto, é parcialmente previsível — e estruturas aninhadas de fundos podem
-**amplificar ou propagar choques**.
+O objetivo central é **medir e prever a exposição das gestoras a ações** no mercado brasileiro. O método é
+validado com **uma ação (ITUB4 — Itaú Unibanco PN)** antes de estender para as demais. A motivação teórica
+vem de *demand-based asset pricing*: preços se formam em parte pela demanda dos investidores institucionais,
+que pode ter estrutura, inércia e co-movimento.
+
+O repositório também contém uma **extensão exploratória** com a CDA Bloco 2 para reconstruir relações
+fundo→fundo e estudar dupla contagem em estruturas FIC/master. Essa extensão é útil para o eixo de risco, mas
+deve ser validada com o orientador antes de virar parte central do TCC.
 
 **Período:** 2016–2021 (carteiras mensais).
 
@@ -24,12 +25,12 @@ R/                 pipeline modular em R
   03_load_sh.R         carrega SH; PL, gestora, universo mensal; auditorias
   04_consolidate_groups.R  consolidação robusta de grupos econômicos
   05_build_panel.R     painel gestora×mês: posição R$ e US$ (PTAX), peso, deltas, ADF
-  06_diagnostics.R     validação dos fatos das bases + cobertura + duplicação FIC
+  06_diagnostics.R     validação dos fatos das bases + cobertura
   07_correlation.R     matrizes de correlação entre gestoras + heatmap
   99_run_all.R         orquestra os módulos-base de exposição (só ITUB4)
-  10_build_cda_edges.R     baixa a CDA Bloco 2 e extrai arestas fundo->fundo
-  11_fund_graph.R          sumariza a rede fundo-sobre-fundo
-  12_all_stocks.R          generaliza o painel e a de-duplicação para todas as ações
+  10_build_cda_edges.R     extensão CDA: baixa Bloco 2 e extrai arestas fundo->fundo
+  11_fund_graph.R          extensão CDA: sumariza a rede fundo-sobre-fundo
+  12_all_stocks.R          generaliza o painel para todas as ações; de-dup CDA é complementar
   13_forecast_itub4.R      primeira rodada de forecasting para ITUB4
   14_forecast_round2.R     robustez: PCA menor, AR encolhido, MAE e direção
   15_forecast_round3.R     previsibilidade de nível e horizontes 1/3/6 meses
@@ -38,7 +39,7 @@ R/                 pipeline modular em R
   18_data_review.R         revisão profunda das bases e auditorias
   19_half_life.R           meia-vida de reversão à alocação-alvo
   forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
-docs/              tcc.tex, refs.bib e tcc.pdf
+docs/              tcc_final.tex/pdf (principal), complementos e refs.bib
 notebooks/         exploração
 outputs/figures/   gráficos (.png)
 outputs/tables/    tabelas de auditoria (.csv)
@@ -68,16 +69,18 @@ Chave de ligação: `Código` (CONS) == `COD_FUNDO` (SH) para o mesmo CNPJ.
    (estacionário). Rodar ADF e reportar.
 5. **Manter os FICs** — a estrutura aninhada é o objeto de estudo, não ruído.
 
-## Limitação crítica
+## Extensão CDA
 
-A CONS é **100% "Ações"**: as relações fundo→fundo foram apagadas pela consolidação. Para montar o
-grafo fundo-sobre-fundo (detecção de ciclos, profundidade, peso indireto) é preciso a base **CDA não
-consolidada** da CVM (bloco BLC_2 de "Cotas de Fundos").
+A CONS é **100% "Ações"**: as relações fundo→fundo foram apagadas pela consolidação. Por isso, qualquer
+análise explícita de grafo fundo-sobre-fundo precisa de uma base adicional. A opção usada aqui é a **CDA não
+consolidada** da CVM, Bloco BLC_2 de "Cotas de Fundos".
 
-**Atualização:** a CDA Bloco 2 (2016–2021) já foi baixada e as arestas fundo→fundo extraídas
-(`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora do git). Das cotas com origem nos
-nossos fundos, ~33% têm destino na amostra, ~32% são **confidenciais** (a CVM mascara o destino) e
-~35% apontam para fundos **externos** — o que delimita até onde o look-through é rastreável.
+Essa CDA **não é necessária** para construir o painel de exposição ou para rodar o forecasting. Ela é uma
+extensão exploratória para medir estrutura FIC/master e dupla contagem. A CDA Bloco 2 (2016–2021) já foi
+baixada e as arestas fundo→fundo extraídas (`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora
+do git). No arquivo histórico processado, o campo `DT_CONFID_APLIC` aparece preenchido em parte das arestas,
+mas `CNPJ_FUNDO_COTA` está disponível; portanto, não tratar essas linhas automaticamente como destino
+mascarado. A de-duplicação reportada é **intra-gestora**.
 
 ## Como rodar
 
@@ -100,11 +103,9 @@ Pipeline-base de ITUB4:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/99_run_all.R
 ```
 
-Extensão para todas as ações, rede e forecast:
+Extensão para todas as ações e forecast:
 
 ```powershell
-& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/10_build_cda_edges.R
-& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/_prep_fund_extracts.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/12_all_stocks.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/13_forecast_itub4.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/14_forecast_round2.R
@@ -115,17 +116,26 @@ Extensão para todas as ações, rede e forecast:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
 ```
 
+Extensão CDA, se aprovada no escopo do TCC:
+
+```powershell
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/_prep_fund_extracts.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/10_build_cda_edges.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/11_fund_graph.R
+```
+
 Compilar o documento (MiKTeX **sem Perl** → usar `pdflatex`+`bibtex`, não `latexmk`):
 
 ```powershell
 Set-Location docs
-pdflatex -interaction=nonstopmode tcc.tex; bibtex tcc; pdflatex -interaction=nonstopmode tcc.tex; pdflatex -interaction=nonstopmode tcc.tex
+pdflatex -interaction=nonstopmode tcc_final.tex; bibtex tcc_final; pdflatex -interaction=nonstopmode tcc_final.tex; pdflatex -interaction=nonstopmode tcc_final.tex
 ```
 
 ## Status
 
 Fase atual: pipeline de exposição validado para ITUB4, extensão para todas as ações, revisão profunda
-das bases, de-duplicação de estruturas fundo-sobre-fundo e rodadas de forecasting já executadas.
+das bases CONS+SH e rodadas de forecasting já executadas. A CDA/de-duplicação está mantida como módulo
+complementar até validação explícita com o orientador.
 
 Resultado central das rodadas de previsão: a variação mensal da posição em ITUB4 é difícil de bater
 contra random walk; a previsibilidade aparece melhor no **nível** da exposição, com reversão à média

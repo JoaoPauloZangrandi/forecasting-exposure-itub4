@@ -41,8 +41,8 @@ read_blc2_year <- function(yr) {
   n_all <- nrow(dt)
   edges <- dt[cnpj_fundo %in% uni_set,
               .(ano = yr, data, cnpj_fundo, cnpj_cota, valor_brl, confidencial)]
-  log_msg("  CDA %d: %d arestas | origem no universo=%d | confidenciais=%d",
-          yr, n_all, nrow(edges), edges[confidencial == TRUE | cnpj_cota == "", .N])
+  log_msg("  CDA %d: %d arestas | origem no universo=%d | DT_CONFID_APLIC preenchido=%d",
+          yr, n_all, nrow(edges), edges[confidencial == TRUE, .N])
   if (DELETE_ZIPS && file.exists(zip)) file.remove(zip)
   rm(dt, lines); gc()
   edges
@@ -56,7 +56,8 @@ log_msg("---")
 log_msg("TOTAL arestas (origem no universo): %d", nrow(edges))
 log_msg("  destino TAMBEM no universo: %d (%.1f%%)",
         edges[dentro_universo == TRUE, .N], 100 * mean(edges$dentro_universo))
-log_msg("  confidenciais/destino vazio: %d", edges[cnpj_cota == "" | confidencial == TRUE, .N])
+log_msg("  DT_CONFID_APLIC preenchido: %d | destino vazio: %d",
+        edges[confidencial == TRUE, .N], edges[cnpj_cota == "", .N])
 log_msg("  fundos-origem distintos: %d | fundos-destino distintos: %d",
         uniqueN(edges$cnpj_fundo), uniqueN(edges$cnpj_cota[edges$cnpj_cota != ""]))
 log_msg("Salvo: %s (%.1f MB)", file.path(OUT_PROC, "cda_edges.csv"),

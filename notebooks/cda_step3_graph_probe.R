@@ -12,12 +12,13 @@ g_of <- setNames(uni$grupo, uni$cnpj)
 
 e[, grupo_origem  := g_of[cnpj_fundo]]
 e[, grupo_destino := g_of[cnpj_cota]]
-e[, classe := fifelse(cnpj_cota == "" | confidencial == TRUE, "confidencial",
+e[, classe := fifelse(cnpj_cota == "", "destino_vazio",
               fifelse(cnpj_cota %in% uni$cnpj, "destino_no_universo", "destino_externo"))]
 
 # --- resumo por ano (leve, versionável) ---
 resumo <- e[, .(arestas = .N,
-                confidencial = sum(classe == "confidencial"),
+                dt_confid_aplic = sum(confidencial == TRUE),
+                destino_vazio = sum(classe == "destino_vazio"),
                 destino_no_universo = sum(classe == "destino_no_universo"),
                 destino_externo = sum(classe == "destino_externo")), by = ano][order(ano)]
 fwrite(resumo, file.path(OUT_TAB, "cda_edges_summary.csv"))
@@ -35,7 +36,7 @@ cat(sprintf("  OUTRA gestora: %d (%.1f%%)\n", outra, 100 * outra / nrow(intra)))
 lm <- max(e$data)
 it <- e[grupo_origem == "Itaú" & data == lm]
 cat(sprintf("\n== Itau, competencia %s: %d arestas (FIC Itau -> fundo) ==\n", as.character(lm), nrow(it)))
-cat(sprintf("  destino Itau: %d | OUTRA gestora: %d | externo/confid.: %d\n",
+cat(sprintf("  destino Itau: %d | OUTRA gestora: %d | externo/vazio: %d\n",
             it[classe == "destino_no_universo" & grupo_destino == "Itaú", .N],
             it[classe == "destino_no_universo" & grupo_destino != "Itaú", .N],
             it[classe != "destino_no_universo", .N]))

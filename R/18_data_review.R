@@ -6,7 +6,7 @@
 # SH (cache): classes (codigo) por CNPJ, estabilidade de gestora, PL, duplicatas.
 # Join/cobertura: chave CONS x SH, os fundos sem match, o que são os ~25% do SH
 #   sem CONS (por classificação ANBIMA).
-# CDA: fração de propriedade phi (sanidade de unidades), confidenciais, self-loops.
+# CDA: fração de propriedade phi (sanidade de unidades), DT_CONFID_APLIC, self-loops.
 # =============================================================================
 suppressPackageStartupMessages({ library(data.table); library(stringr) })
 .this <- { a <- commandArgs(FALSE); h <- grep("--file=", a, value = TRUE)
@@ -79,20 +79,21 @@ cov_cls <- sh_nocons[, .(n = .N), by = .(eq = grepl("ACOES|ACAO", deaccent_upper
 add("[JOIN] SH sem CONS: %.1f%% NAO sao de acoes (RF/MM/etc.) -> ausencia esperada",
     100 * cov_cls[eq == FALSE, sum(n)] / cov_cls[, sum(n)])
 
-# ---------------- CDA: phi (unidades), confidenciais, self-loops ----------------
+# ---------------- CDA: phi (unidades), DT_CONFID_APLIC, self-loops -------------
 e <- fread("data/processed/cda_edges.csv", colClasses = list(character = c("cnpj_fundo","cnpj_cota")))
 add("[CDA] self-loops (fundo detem a propria cota): %d", e[cnpj_fundo == cnpj_cota, .N])
 plf <- fread("data/processed/pl_fundmonth.csv", colClasses = list(character = "cnpj"))
 plf[, `:=`(ano = year(data), mes = month(data))]
 PL <- plf[, .(pl = sum(pl_mil, na.rm = TRUE)), by = .(ano, mes, cnpj)]
 e[, `:=`(ano = year(data), mes = month(data))]
-es <- merge(e[cnpj_cota != "" & confidencial == FALSE],
+es <- merge(e[cnpj_cota != ""],
             PL, by.x = c("ano","mes","cnpj_cota"), by.y = c("ano","mes","cnpj"))
 es[pl > 0, phi := valor_brl / (pl * 1000)]
 add("[CDA] phi=valor/PL_destino: mediana %.3f | %% em (0,1]: %.1f%% | %% >1 (capado): %.1f%%",
     median(es$phi, na.rm = TRUE), 100 * mean(es$phi > 0 & es$phi <= 1, na.rm = TRUE),
     100 * mean(es$phi > 1, na.rm = TRUE))
-add("[CDA] confidenciais: %.1f%% das arestas (origem no universo)", 100 * mean(e$confidencial | e$cnpj_cota == ""))
+add("[CDA] DT_CONFID_APLIC preenchido: %.1f%% das arestas | destino vazio: %d",
+    100 * mean(e$confidencial), e[cnpj_cota == "", .N])
 
 R <- unlist(R); writeLines(R, file.path(OUT_TAB, "data_review_report.txt"))
 cat("\n================= REVISAO DAS BASES =================\n"); cat(paste(R, collapse = "\n"), "\n")

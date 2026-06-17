@@ -10,5 +10,5 @@
 [JOIN] CONS sem SH: 2 | SH sem CONS: 42024 | cobertura SH-em-CONS: 74.8%
 [JOIN] SH sem CONS: 94.7% NAO sao de acoes (RF/MM/etc.) -> ausencia esperada
 [CDA] self-loops (fundo detem a propria cota): 0
-[CDA] phi=valor/PL_destino: mediana 0.008 | % em (0,1]: 98.4% | % >1 (capado): 1.5%
-[CDA] confidenciais: 32.3% das arestas (origem no universo)
+[CDA] phi=valor/PL_destino: mediana 0.007 | % em (0,1]: 98.6% | % >1 (capado): 1.4%
+[CDA] DT_CONFID_APLIC preenchido: 32.3% das arestas | destino vazio: 0

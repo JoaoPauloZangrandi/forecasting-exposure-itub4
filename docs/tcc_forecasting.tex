@@ -43,8 +43,8 @@ Investigamos se a exposição das gestoras a ações é \emph{previsível}, com 
 (i)~a \textbf{variação mensal} da posição é \textbf{imprevisível} --- nenhum modelo bate o RW e a direção é
 um cara-ou-coroa (50,8\%); (ii)~o \textbf{nível} da posição (em ITUB4) é previsível por \textbf{reversão à
 média} (o AR bate o RW em $\sim$10\%), mas o peso não; (iii)~\textbf{features de rede} (exposição dos
-vizinhos no grafo fundo-sobre-fundo) \textbf{não acrescentam} sinal ($\gamma\approx0$), o que torna um GNN
-improvável de ajudar a \emph{prever}; (iv)~ao generalizar para 238 ações, a previsibilidade do nível
+vizinhos no grafo fundo-sobre-fundo construído em uma extensão com CDA) \textbf{não acrescentam} sinal
+($\gamma\approx0$), o que torna um GNN improvável de ajudar a \emph{prever}; (iv)~ao generalizar para 238 ações, a previsibilidade do nível
 \textbf{não é geral}: concentra-se nas \emph{blue chips} muito detidas (ITUB4 está entre as 3 mais
 previsíveis), enquanto para a ação típica o RW vence. A leitura econômica: a demanda institucional é em larga
 medida imprevisível; o componente previsível é a \emph{alocação-alvo estável} nos papéis mais concentrados ---
@@ -117,14 +117,15 @@ Peso         & AR painel     & $-4{,}0$  & $-14{,}8$ & $-26{,}0$ \\
 \label{fig:r3}
 \end{figure}
 
-\section{A rede não ajuda a prever}\label{sec:rede}
+\section{Especificação complementar: a rede não ajuda a prever}\label{sec:rede}
 Adicionamos ao modelo de nível um preditor de \textbf{rede}: a exposição (defasada) das gestoras
-\emph{vizinhas} no grafo fundo-sobre-fundo (ligações cross-gestora via FICs). O coeficiente de rede é
-$\gamma\approx0{,}01$ (praticamente zero) e o \emph{skill} \emph{não} melhora ($+3{,}1\%$ com rede vs
-$+3{,}3\%$ sem). Ou seja, a previsibilidade é \textbf{idiossincrática} (reversão à média própria), não
-contágio pela rede. \textbf{Implicação prática:} como \emph{features} de rede feitas à mão não acrescentam,
-um \textbf{GNN} --- que aprende da mesma estrutura --- é improvável de ajudar a \emph{prever}. O valor da rede
-é \textbf{descritivo} (medir o risco: a dupla contagem fundo-sobre-fundo de 37\%), não preditivo.
+\emph{vizinhas} no grafo fundo-sobre-fundo construído com a CDA (ligações cross-gestora via FICs). Como a CDA
+é uma base adicional ao núcleo CONS+SH, este exercício deve ser lido como \textbf{complementar}. O coeficiente
+de rede é $\gamma\approx0{,}01$ (praticamente zero) e o \emph{skill} \emph{não} melhora ($+3{,}1\%$ com rede
+vs $+3{,}3\%$ sem). Ou seja, neste desenho, a previsibilidade é \textbf{idiossincrática} (reversão à média
+própria), não contágio pela rede. \textbf{Implicação prática:} mesmo que a CDA seja mantida no TCC, um
+\textbf{GNN} voltado à previsão parece ter baixo retorno esperado. O valor potencial da rede é descritivo
+(mensurar estrutura e possível dupla contagem), não preditivo.
 
 \section{A previsibilidade não generaliza --- concentra-se nas \emph{blue chips}}\label{sec:geral}
 Repetindo o forecast de nível para \textbf{238 ações} com histórico suficiente (Figura~\ref{fig:r5}): a
@@ -148,17 +149,17 @@ curto prazo (variação mensal $\approx$ martingale), e o que há de previsível
 alocação-alvo}, concentrada justamente nas ações mais \emph{crowded}. Isso é duplamente relevante: são esses
 papéis que (a)~concentram demanda institucional sobreposta e (b)~são mais \emph{frágeis} no sentido de
 \citet{greenwoodthesmar2011}. Em outras palavras, onde a demanda é previsível é também onde o risco de
-co-movimento é maior. Por fim, a rede fundo-sobre-fundo é \textbf{essencial para medir o risco}
-(de-duplicação, estruturas aninhadas) mas \textbf{não para prever} a exposição --- por isso não levamos o GNN
-adiante para forecasting.
+co-movimento é maior. A rede fundo-sobre-fundo, quando incorporada via CDA, não melhora a previsão; portanto,
+ela deve permanecer como eixo descritivo/complementar, sujeito à validação do orientador, e não como base do
+resultado principal de forecasting.
 
 \section{Limitações e próximos passos}\label{sec:lim}
 Painel curto (72 meses) e frequência mensal limitam a potência dos testes; a validação é centrada em ITUB4 e
 nas \emph{blue chips}; séries com troca de \emph{ticker} foram excluídas. Caminhos: horizontes/frequências
 alternativas; modelar a \emph{alocação-alvo} explicitamente (correção de erro/half-life de reversão);
-e, no eixo de \emph{risco} (não de previsão), aprofundar as métricas de rede (ciclos, profundidade, peso
-indireto) já disponíveis. O arcabouço de avaliação (\texttt{R/13}--\texttt{R/17}) é reutilizável para todas as
-ações.
+e, caso o uso da CDA seja aprovado, aprofundar métricas de rede (ciclos, profundidade, peso indireto) como
+análise de risco, não como motor de previsão. O arcabouço de avaliação (\texttt{R/13}--\texttt{R/17}) é
+reutilizável para todas as ações.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
