@@ -49,11 +49,12 @@ extensão para todos os tickers identificáveis.
 
 O resultado central de dados é que a exposição institucional é concentrada em \emph{blue chips}, exatamente
 os ativos em que a literatura de demanda e propriedade comum sugere maior relevância para preços e risco. No
-forecasting, modelos lineares e fatoriais mostram que a variação mensal é difícil de prever; já o nível da
-exposição em valor apresenta alguma reversão à média, especialmente em ações muito líquidas e amplamente
-detidas. A quantidade estimada de ITUB4, construída com preço B3/COTAHIST, entra como robustez para separar
-preço de quantidade. A CDA Bloco~2 não substitui esse núcleo consolidado: ela é tratada em apêndice técnico,
-com detalhe, para reconstruir a rede fundo$\to$fundo apagada pela CONS, avaliar aninhamento, testar
+forecasting, a variação mensal é difícil de prever; o nível da exposição em valor mostra reversão à média em
+ITUB4 e em algumas ações muito líquidas, mas uma especificação consolidada com todas as ações elegíveis,
+restante do mercado ($n-1$), fator comum e validação fora da amostra não supera o \emph{random walk}. A
+quantidade estimada de ITUB4, construída com preço B3/COTAHIST, entra como robustez para separar preço de
+quantidade. A CDA Bloco~2 não substitui esse núcleo consolidado: ela é tratada em apêndice técnico, com
+detalhe, para reconstruir a rede fundo$\to$fundo apagada pela CONS, avaliar aninhamento, testar
 circularidade e fundamentar extensões futuras com modelos de grafo.
 
 \noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de investimento; exposição em ações;
@@ -274,6 +275,16 @@ As métricas são RMSE, MAE, \emph{skill} contra o \emph{random walk} e acerto d
 estimados somente na janela de treino, sem usar informação futura. A análise em valor é a especificação
 principal; a análise em quantidade estimada é uma robustez para ITUB4.
 
+A especificação consolidada final, implementada no script da rodada 23, usa a unidade gestora $\times$ ação
+$\times$ mês. Uma ação entra na avaliação quando tem ao menos cinco gestoras com histórico suficiente; uma
+gestora entra para uma ação quando aparece com ao menos 24 meses positivos. A
+janela mínima de treino é de 36 meses. Tickers com \emph{random walk} perfeito na amostra fora da amostra,
+como eventos societários ou séries degeneradas, são excluídos da métrica de \emph{skill}, pois o denominador
+do ganho relativo é zero. O AR individual é estimado como reversão à média e tem coeficiente de persistência
+limitado a $[0,0{,}995]$, para evitar extrapolações explosivas em séries curtas. Para avaliar significância
+agregada, o projeto usa \emph{bootstrap} por data de origem, preservando a dependência transversal entre
+gestoras e ações no mesmo mês.
+
 \chapter{Resultados}
 
 \section{Exposição e quantidade em ITUB4}
@@ -422,6 +433,52 @@ generalização para quantidade exigiria baixar e validar preços mensais para t
 \label{fig:r5}
 \end{figure}
 
+\section{Forecast consolidado com restante do mercado}
+
+A especificação mais alinhada à pergunta final do TCC é o painel consolidado gestora $\times$ ação
+$\times$ mês. Nessa versão, o alvo é $E_{g,i,t+1}$, o nível da exposição em US\$ da gestora $g$ na ação
+$i$. O modelo usa não apenas o histórico da própria gestora, mas também o restante do mercado naquela ação:
+a exposição média das demais gestoras, isto é, o componente $n-1$. Também é testado um fator comum de
+exposição estimado por PCA apenas na janela de treino.
+
+Após remover três tickers degenerados, em que o \emph{random walk} tem erro zero na amostra fora da amostra,
+a avaliação contém 235 ações e 183.924 previsões por modelo. A Tabela~\ref{tab:consolforecast} mostra que o
+\emph{random walk} continua sendo o benchmark mais difícil. AR individual, AR de painel, $n-1$ e fator comum
+ficam levemente piores em RMSE e MAE. O coeficiente mediano do componente $n-1$ é 0,0054, praticamente zero,
+e o coeficiente mediano do fator comum é 0,0009. O \emph{bootstrap} por mês não indica melhora
+estatisticamente robusta de nenhum modelo contra o \emph{random walk}.
+
+\begin{table}[H]\centering
+\caption{Forecast consolidado do nível da exposição em US\$ para todas as ações elegíveis.}
+\label{tab:consolforecast}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Modelo} & \textbf{RMSE} & \textbf{MAE} & \textbf{Skill RMSE} & \textbf{Direção} \\
+\midrule
+Random walk     & 10.752 & 2.638 & 0,00\%  & -- \\
+AR1 painel      & 10.855 & 2.786 & -0,96\% & 51,9\% \\
+$n-1$ painel    & 10.869 & 2.869 & -1,09\% & 51,0\% \\
+AR1 individual  & 10.870 & 2.821 & -1,10\% & 51,9\% \\
+Fator comum     & 10.874 & 2.878 & -1,14\% & 51,0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.78\textwidth]{forecast_consolidated_panel_skill.png}
+\caption{\emph{Skill} de RMSE no forecast consolidado, contra o random walk.}
+\label{fig:consolforecast}
+\end{figure}
+
+A conclusão é mais conservadora do que a evidência isolada de ITUB4. Em ITUB4, há reversão à média do nível
+em valor. No painel amplo, porém, essa regularidade não se transforma em ganho agregado robusto. Isso é
+coerente com a literatura de demanda: carteiras observadas revelam exposição e concentração institucional,
+mas isso não implica que ajustes mensais agregados sejam facilmente previsíveis fora da amostra. Para o TCC,
+esse resultado é importante porque evita uma narrativa excessivamente otimista. O projeto mede demanda
+institucional com boa granularidade, mostra onde há concentração e testa previsibilidade com um benchmark
+forte. A evidência final é que, no agregado, o \emph{random walk} permanece difícil de bater.
+
 \section{Teste complementar com rede}
 
 Uma especificação complementar adiciona a exposição dos vizinhos no grafo CDA como preditor do nível da
@@ -439,8 +496,9 @@ exposição consolidada das gestoras a ações usando CONS e SH, com tratamento 
 empréstimos de ações, grupos econômicos, R\$ e US\$. Segundo, a exposição institucional é concentrada em
 \emph{blue chips}, o que conecta o exercício à literatura de demanda por ações e fragilidade por propriedade
 comum. Terceiro, a variação mensal da exposição é difícil de prever com modelos lineares simples; o
-\emph{random walk} é um benchmark forte. Quarto, o nível da exposição em valor apresenta alguma reversão à
-média, especialmente em ITUB4 e em ações muito líquidas. Quinto, a quantidade estimada mostra que parte da
+\emph{random walk} é um benchmark forte. Quarto, o nível da exposição em valor apresenta reversão à média em
+ITUB4 e em algumas ações muito líquidas, mas o forecast consolidado com todas as ações elegíveis, restante do
+mercado e fator comum não supera o \emph{random walk}. Quinto, a quantidade estimada mostra que parte da
 reversão patrimonial em valor não deve ser confundida com compra e venda previsível de ações.
 
 A interpretação econômica é alinhada à literatura de demanda por ações. Carteiras observadas revelam demanda
@@ -451,10 +509,11 @@ um sistema de previsão consolidada de exposição por gestora e ação, usando 
 mercado como núcleo; a rede entra como extensão para enriquecer features e interpretar risco.
 
 O resultado negativo da feature manual de rede não fecha a questão. Ele funciona como baseline: uma média de
-vizinhos não acrescenta sinal suficiente, mas um modelo de grafo mais flexível ainda é metodologicamente
-coerente como extensão. A próxima etapa é formalizar a previsão em painel gestora $\times$ ação $\times$ mês,
-com features do restante do mercado, e então comparar uma versão com grafo contra \emph{random walk}, AR,
-painel e fatores.
+vizinhos não acrescenta sinal suficiente, e a especificação consolidada com $n-1$ e fator comum também não
+supera o \emph{random walk}. Um modelo de grafo mais flexível, como uma GNN temporal, ainda é
+metodologicamente coerente como extensão, mas só seria defensável se mantivesse a mesma disciplina
+fora-da-amostra: origem móvel, features estimadas apenas no treino, comparação contra \emph{random walk},
+AR, painel, $n-1$ e fatores, e relatório explícito de quando o ganho não aparece.
 
 \appendix
 \chapter{Apêndice: CDA e Estruturas Fundo-Sobre-Fundo}\label{ap:cda}

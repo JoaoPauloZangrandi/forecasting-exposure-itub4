@@ -321,7 +321,9 @@ Scripts:
 - `R/16_forecast_round4.R`: features de rede via CDA;
 - `R/17_forecast_round5.R`: generalização do forecast de nivel para todas as ações;
 - `R/19_half_life.R`: meia-vida da reversão a media em valor, quantidade e peso;
-- `R/20_forecast_quantity.R`: forecasting usando quantidade estimada de ITUB4.
+- `R/20_forecast_quantity.R`: forecasting usando quantidade estimada de ITUB4;
+- `R/22_master_validation.R`: auditoria mestre PASS/WARN/FAIL;
+- `R/23_forecast_consolidated_panel.R`: forecast consolidado gestora x ação x mes com AR, n-1 e fator comum.
 
 ## 7. Resultados principais
 
@@ -369,7 +371,24 @@ Resultado: previsibilidade aparece mais claramente no nivel da posição em US$ 
 - Em quantidade, AR individual melhora 3,5% em h=1, mas perde para o random walk em h=3 e h=6.
 - Isso indica que a reversão em valor nao deve ser vendida como reversão forte de demanda.
 
-### 7.5 Half-life
+### 7.5 Forecast consolidado final
+
+O teste final usa todas as ações elegiveis no painel gestora x ação x mes. A especificação compara random
+walk, AR1 individual, AR1 de painel, n-1 (restante do mercado na mesma ação) e fator comum por PCA.
+
+Resultado:
+
+- 235 ações avaliadas depois de excluir 3 tickers degenerados;
+- 183.924 previsões OOS por modelo;
+- nenhum modelo supera o random walk no agregado;
+- coeficiente mediano de n-1: 0,0054;
+- coeficiente mediano do fator comum: 0,0009;
+- bootstrap por mes nao indica melhora robusta.
+
+Leitura: ITUB4 tem reversão a media no nivel em valor, mas o ganho nao generaliza para o painel amplo como
+previsibilidade agregada robusta.
+
+### 7.6 Half-life
 
 O AR(1) no nivel estima velocidade de reversão a alocação-alvo.
 
@@ -461,7 +480,7 @@ Faz sentido como extensao porque:
 - o orientador explicitou a ideia de previsão por graphs network;
 - a CDA ja fornece as arestas fundo->fundo;
 - o painel gestora x ação x mes ja fornece os alvos de exposição consolidada;
-- a comparação contra random walk, AR e fatores ja existe.
+- a comparação contra random walk, AR, painel, n-1 e fatores ja existe.
 
 ### 9.5 Riscos de GNN
 
@@ -480,8 +499,8 @@ Defesa conservadora:
 2. CONS e SH medem exposição em valor por gestora, ação e mes.
 3. CDA reconstrói, em apendice, a rede fundo->fundo apagada pela CONS.
 4. O tratamento de dados foi auditado: formatos, duplicatas, joins, PL, tickers, preços e arestas.
-5. A pergunta de previsão foi testada com benchmark forte e sem vazamento.
-6. A primeira feature de rede nao melhora, mas vira baseline para uma extensao com modelo de grafo.
+5. A pergunta de previsão foi testada com benchmark forte, n-1, fatores, bootstrap por mes e sem vazamento.
+6. A primeira feature de rede nao melhora, e isso vira baseline disciplinado para uma extensao com modelo de grafo.
 
 ## 11. Figuras e tabelas para apresentar ao orientador
 
@@ -496,8 +515,10 @@ Ordem sugerida para a reunião:
 7. Tabela `graph_structural_by_month.csv`: destacar 0 meses com ciclos, profundidade mediana 7 e max 9.
 8. `itub4_dedup_itau.png` e `itub4_dedup_summary.csv`: mostrar duplicação intra-gestora.
 9. `forecast_round3_skill.png`: mostrar que nivel em valor tem alguma previsibilidade.
-10. `forecast_round4_metrics.csv`: mostrar que feature manual de rede ainda nao melhora, funcionando como baseline de extensao.
-11. `forecast_quantity_delta_skill.png`: se perguntarem sobre quantidade, mostrar como robustez.
+10. `forecast_consolidated_panel_metrics.csv`: mostrar que o painel amplo com n-1 e fator comum nao bate random walk.
+11. `master_validation_checks.csv`: mostrar que a auditoria mestre passou sem FAIL.
+12. `forecast_round4_metrics.csv`: mostrar que feature manual de rede ainda nao melhora, funcionando como baseline de extensao.
+13. `forecast_quantity_delta_skill.png`: se perguntarem sobre quantidade, mostrar como robustez.
 
 Mensagem de apresentação:
 
@@ -518,6 +539,8 @@ Ordem minima:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/17_forecast_round5.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/20_forecast_quantity.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/23_forecast_consolidated_panel.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/22_master_validation.R
 ```
 
 Camada CDA/rede:
@@ -543,7 +566,7 @@ pdflatex -interaction=nonstopmode tcc.tex
 ## 13. Pontos ainda sensiveis
 
 - Confirmar a referencia bibliografica exata de `Replicant Investment Platforms`.
-- Remover ou explicar séries degeneradas de tickers antigos/delistings no forecast de todas as ações.
+- Manter documentada a exclusão de BVMF3, VVAR11 e MLFT4 como séries degeneradas do forecast amplo.
 - Decidir o desenho exato do modelo de grafo: nós=fundos ou gestoras; alvo=nível ou variação; horizonte=1, 3 ou 6 meses.
 - Cuidar para nao vender GNN como promessa de ganho; ele deve ser testado contra baselines.
 
@@ -552,6 +575,7 @@ pdflatex -interaction=nonstopmode tcc.tex
 O resultado mais defensavel e:
 
 > Com CONS e SH, construimos um painel confiavel da exposição consolidada das gestoras a ações. A variação
-> mensal da exposição e dificil de prever com modelos simples; o nivel em valor tem alguma reversão a media.
-> A CDA, documentada em apendice, reconstrói a rede fundo-sobre-fundo que a CONS apaga e prepara uma extensão
-> com modelos de grafo para estudar risco e possíveis ganhos preditivos.
+> mensal da exposição e dificil de prever; o nivel em valor tem reversão a media em ITUB4 e em algumas blue
+> chips, mas o painel amplo com n-1 e fator comum nao bate random walk. A CDA, documentada em apendice,
+> reconstrói a rede fundo-sobre-fundo que a CONS apaga e prepara uma extensão com modelos de grafo para
+> estudar risco e possíveis ganhos preditivos.

@@ -42,6 +42,8 @@ R/                 pipeline modular em R
   19_half_life.R           meia-vida de reversão à alocação-alvo
   20_forecast_quantity.R   forecasting usando quantidade estimada de ITUB4
   21_cda_graph_figures.R   figuras de grafo CDA e diagrama do desenho empírico
+  22_master_validation.R    auditoria mestre PASS/WARN/FAIL
+  23_forecast_consolidated_panel.R  forecast consolidado gestora×ação×mês com n-1 e fator comum
   forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
 docs/              tcc.tex/pdf (TCC único), refs.bib e guia_tecnico_projeto.md
 Comprehend.md      documentação longa: teoria, bases, scripts, resultados, CDA e GNN
@@ -125,6 +127,8 @@ Extensão para todas as ações e forecast:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/18_data_review.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/20_forecast_quantity.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/23_forecast_consolidated_panel.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/22_master_validation.R
 ```
 
 Camada de rede/CDA:
@@ -149,10 +153,11 @@ mais granular, use `Comprehend.md`.
 ## Status
 
 Fase atual: pipeline de exposição consolidada validado para ITUB4, extensão para todas as ações, revisão
-profunda das bases CONS+SH, apêndice CDA/rede documentado, rodadas de forecasting e primeira feature de rede
-executadas.
+profunda das bases CONS+SH, apêndice CDA/rede documentado, forecast consolidado gestora×ação×mês e auditoria
+mestre PASS/WARN/FAIL executados.
 
 Resultado central: o projeto deve ser motivado como forecasting consolidado de demanda/exposição. A variação
-mensal é difícil de bater contra random walk; o nível em valor tem alguma reversão à média; a quantidade de
-ITUB4 mostra que parte da reversão em valor vem de preço/marcação; e a CDA entra como apêndice técnico para
-redes, risco estrutural e eventual GNN.
+mensal é difícil de bater contra random walk; o nível em valor tem reversão à média em ITUB4 e em algumas
+blue chips; mas o painel amplo com todas as ações elegíveis, n-1 e fator comum não supera o random walk no
+agregado. A quantidade de ITUB4 mostra que parte da reversão em valor vem de preço/marcação; e a CDA entra
+como apêndice técnico para redes, risco estrutural e eventual GNN.

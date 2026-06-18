@@ -287,6 +287,8 @@ Resultado:
 - `R/17_forecast_round5.R`: forecast de nivel para todas as acoes elegiveis.
 - `R/19_half_life.R`: meia-vida de reversao a media.
 - `R/20_forecast_quantity.R`: robustez com quantidade estimada de ITUB4.
+- `R/22_master_validation.R`: auditoria mestre PASS/WARN/FAIL das bases, outputs e premissas.
+- `R/23_forecast_consolidated_panel.R`: forecast consolidado gestora x acao x mes com AR, n-1 e fator comum.
 
 ### 8.5 CDA e grafos
 
@@ -402,6 +404,71 @@ O forecast de nivel em valor foi repetido para acoes elegiveis. A previsibilidad
 
 Isso e coerente com a literatura: os papeis crowded sao justamente os mais relevantes para demanda
 institucional e risco.
+
+### 10.5 Forecast consolidado final
+
+A especificacao mais robusta do projeto esta em `R/23_forecast_consolidated_panel.R`.
+
+Unidade:
+
+```text
+gestora x acao x mes
+```
+
+Alvo:
+
+```text
+E[g, i, t+1] = nivel da exposicao em US$ da gestora g na acao i no mes seguinte
+```
+
+Modelos comparados:
+
+- random walk: `E[g,i,t+1] = E[g,i,t]`;
+- AR1 individual com coeficiente limitado a `[0, 0.995]`;
+- AR1 de painel por acao;
+- modelo `n-1`, em que o restante do mercado e a exposicao media das demais gestoras naquela acao;
+- fator comum por PCA, estimado somente na janela de treino.
+
+Regras de robustez:
+
+- origem movel com janela expansivel;
+- treino minimo de 36 meses;
+- acoes com pelo menos 5 gestoras elegiveis;
+- gestora-acao elegivel se tiver ao menos 24 meses positivos;
+- tickers degenerados com erro zero do random walk fora da amostra sao excluidos da skill;
+- bootstrap por data de origem para preservar dependencia transversal no mes.
+
+Resultado:
+
+- 235 acoes efetivamente avaliadas depois de excluir 3 degeneradas;
+- 183.924 previsoes OOS por modelo;
+- nenhum modelo bateu o random walk no agregado;
+- `n-1` tem coeficiente mediano 0,0054, praticamente zero;
+- fator comum tem coeficiente mediano 0,0009;
+- acerto direcional dos modelos com sinal fica em torno de 51%, sem ganho economico forte.
+
+Interpretacao segura:
+
+```text
+ITUB4 mostra reversao a media do nivel em valor, mas esse resultado nao generaliza como ganho agregado
+robusto para todas as acoes. O random walk continua sendo o benchmark dominante no painel amplo.
+```
+
+### 10.6 Auditoria mestre
+
+`R/22_master_validation.R` transforma a confianca no pipeline em evidencia reproduzivel. Ele checa arquivos,
+joins CONS-SH, unidades, duplicatas, valores finitos, conversao quantidade-preco, CDA, grafo, outputs de
+forecasting e separacao entre nucleo CONS/SH e apendice CDA.
+
+Resultado atual:
+
+```text
+PASS: 41
+FAIL: 0
+```
+
+Isso nao garante que a CVM nunca tenha erro de origem. Garante que, dadas as bases recebidas e as premissas
+documentadas, o pipeline nao esta quebrando as regras internas do projeto.
 
 ## 11. CDA: resultados tecnicos
 
@@ -586,6 +653,8 @@ Forecasting:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/17_forecast_round5.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/20_forecast_quantity.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/23_forecast_consolidated_panel.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/22_master_validation.R
 ```
 
 CDA e grafos:
@@ -619,6 +688,8 @@ pdflatex -interaction=nonstopmode tcc.tex
 - `outputs/tables/cda_edges_summary.csv`: resumo CDA.
 - `outputs/tables/graph_structural_by_month.csv`: ciclos e profundidade.
 - `outputs/tables/forecast_round4_metrics.csv`: teste da feature manual de rede.
+- `outputs/tables/forecast_consolidated_panel_metrics.csv`: forecast consolidado com AR, n-1 e fator comum.
+- `outputs/tables/master_validation_checks.csv`: auditoria mestre PASS/WARN/FAIL.
 
 ## 17. Mensagem final do projeto
 
@@ -627,8 +698,8 @@ Forma curta:
 ```text
 O TCC mede exposicao consolidada de gestoras a acoes e testa se essa exposicao e previsivel. A literatura de
 demand-based asset pricing motiva olhar para carteiras institucionais como demanda observada. A CONS e SH
-constroem o painel principal. A previsao mensal da variacao e dificil, mas o nivel em valor mostra alguma
-reversao a media, principalmente em blue chips. A CDA entra em apendice para documentar a rede fundo-sobre-
-fundo que a CONS apaga, avaliar risco de aninhamento/duplicacao e preparar uma extensao com modelos de grafo.
+constroem o painel principal. A previsao mensal da variacao e dificil; o nivel em valor mostra reversao a
+media em ITUB4 e em algumas blue chips, mas o forecast consolidado com todas as acoes elegiveis, n-1 e fator
+comum nao bate o random walk no agregado. A CDA entra em apendice para documentar a rede fundo-sobre-fundo
+que a CONS apaga, avaliar risco de aninhamento/duplicacao e preparar uma extensao com modelos de grafo.
 ```
-

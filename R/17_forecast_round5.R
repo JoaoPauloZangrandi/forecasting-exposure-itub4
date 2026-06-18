@@ -40,25 +40,27 @@ eval_ticker <- function(tk) {
     se_rw <- se_rw + sum((act - M[t, ])^2); se_ar <- se_ar + sum((act - f_ar)^2)
     n <- n + ncol(M)
   }
+  deg <- se_rw <= .Machine$double.eps
   data.table(ticker = tk, n_gestoras = length(gs),
              rmse_rw = sqrt(se_rw / n), rmse_ar = sqrt(se_ar / n),
-             skill_pct = round(100 * (1 - sqrt(se_ar / se_rw)), 1))
+             skill_pct = if (deg) NA_real_ else round(100 * (1 - sqrt(se_ar / se_rw)), 1),
+             degenerate_rw = deg)
 }
 
 res <- rbindlist(lapply(tks, eval_ticker))
 setorder(res, -skill_pct)
 write_tab(res, "forecast_round5_skill_by_stock.csv")
 
-ov_rw <- res[, sqrt(sum((rmse_rw^2) * n_gestoras) / sum(n_gestoras))]  # aprox p/ visao geral
+res_eval <- res[degenerate_rw == FALSE & is.finite(skill_pct)]
 cat("\n== RODADA 5: forecast de NIVEL, todas as acoes (skill AR vs RW, h=1) ==\n")
-cat(sprintf("acoes avaliadas: %d | skill mediana: %.1f%% | %% acoes com skill>0: %.0f%%\n",
-            nrow(res), median(res$skill_pct), 100 * mean(res$skill_pct > 0)))
+cat(sprintf("acoes avaliadas: %d (%d degeneradas excluidas da estatistica) | skill mediana: %.1f%% | %% acoes com skill>0: %.0f%%\n",
+            nrow(res), res[degenerate_rw == TRUE, .N], median(res_eval$skill_pct), 100 * mean(res_eval$skill_pct > 0)))
 cat(sprintf("ITUB4: %.1f%% | quartis da skill: %s\n",
             res[ticker == "ITUB4", skill_pct],
-            paste(round(quantile(res$skill_pct, c(.25,.5,.75))), collapse = " / ")))
-cat("\nTop 10 e bottom 5 por skill:\n"); print(rbind(head(res, 10), tail(res, 5)))
+            paste(round(quantile(res_eval$skill_pct, c(.25,.5,.75), na.rm = TRUE)), collapse = " / ")))
+cat("\nTop 10 e bottom 5 por skill (exclui degeneradas):\n"); print(rbind(head(res_eval, 10), tail(res_eval, 5)))
 
-p <- ggplot(res, aes(skill_pct)) +
+p <- ggplot(res_eval, aes(skill_pct)) +
   geom_histogram(binwidth = 2, fill = "#2f6f8f", color = "white") +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_vline(xintercept = res[ticker == "ITUB4", skill_pct], color = "#8f3f2f", linewidth = 0.8) +
