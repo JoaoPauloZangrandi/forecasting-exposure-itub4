@@ -1,0 +1,7 @@
+etapa,script,alvo,unidade,horizonte,janela_treino,significancia
+Delta ITUB4 em valor,R/13 e R/14,delta_pos_usd_mil,gestora-mes,1 mes,minimo fixo 36 meses; expansivel,t pareado da perda quadratica; binomial de direcao
+Delta ITUB4 em quantidade,R/20,delta_qtd_itub4,gestora-mes,1 mes,minimo fixo 36 meses; expansivel,t pareado da perda quadratica; binomial de direcao
+Nivel ITUB4 em valor,R/15,pos_usd_mil,gestora-mes,"1, 3, 6 meses",minimo fixo 36 meses; expansivel,t pareado da perda quadratica
+Nivel ITUB4 em quantidade,R/20,qtd_itub4,gestora-mes,"1, 3, 6 meses",minimo fixo 36 meses; expansivel,t pareado da perda quadratica
+Todas as acoes,R/17,pos_usd_mil por ticker,ticker,1 mes,minimo fixo 36 meses; expansivel,distribuicao de skill por ticker; degenerados marcados
+Forecast consolidado,R/23,pos_usd_mil por gestora-ticker,gestora-ticker-mes,1 mes,minimo fixo 36 meses; expansivel,bootstrap por data de origem

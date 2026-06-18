@@ -1,6 +1,7 @@
 \documentclass[12pt,a4paper]{report}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage[brazil]{babel}
 \usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage{graphicx}
@@ -199,6 +200,32 @@ A duplicata exata da CONS é um ponto importante. A revisão profunda encontrou 
 exatamente repetidas, com impacto de aproximadamente 0,01\% nos totais. A correção preserva lotes legítimos
 com valores diferentes e remove apenas cópias idênticas.
 
+\begin{table}[H]\centering
+\caption{Principais checagens de validação das bases.}
+\label{tab:datavalidation}
+\scriptsize
+\begin{tabular}{p{4.2cm}p{6.2cm}p{3.4cm}}
+\toprule
+\textbf{Checagem} & \textbf{Evidência} & \textbf{Leitura} \\
+\midrule
+Tipo de ativo na CONS & 100\% das linhas tratadas aparecem como Ações &
+Consistente com uso da CONS de ações \\
+Join CONS--SH & Apenas 2 fundos-mês da CONS ficam sem SH em 2016--2021 &
+Cobertura praticamente completa \\
+SH sem CONS & 42.024 observações; 94,7\% são fundos não-ações &
+Ausência esperada pelo recorte de ações \\
+Duplicatas exatas na CONS & 32.970 linhas removidas de aproximadamente 21,1 milhões &
+Impacto material desprezível, mas correção necessária \\
+Painel ITUB4 & 72 meses, 42 grupos econômicos, 2.835 observações gestora-mês &
+Cobertura suficiente para origem móvel \\
+Preço B3 de ITUB4 & 72 meses sem lacuna; erro de reconstrução de valor $9{,}3\times10^{-10}$ mil R\$ &
+Quantidade estimada valida aritmeticamente \\
+CDA em apêndice & 835.694 arestas; 0 self-loops; 0 meses com ciclo em 72 &
+Rede útil para risco e extensão, não para substituir a CONS \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Definição de exposição}
 
 Para ITUB4, há três definições:
@@ -268,22 +295,64 @@ grupos econômicos e 72 meses.
 \section{Avaliação preditiva}
 
 As previsões usam origem móvel com janela expansível. Em cada origem, o modelo é estimado apenas com dados
-até o mês $t$ e prevê $t+h$. O benchmark é o \emph{random walk}: para a variação, a previsão é
-$\widehat{\Delta}=0$; para o nível, a previsão é $\widehat{y}_{t+h}=y_t$.
+até o mês $t$ e prevê $t+h$. A janela mínima de treino é sempre de 36 meses. Essa escolha foi fixada antes
+da leitura dos resultados e não foi flexibilizada por especificação, por alvo ou por modelo. Depois do mês
+36, a janela apenas se expande: o exercício não testa janelas alternativas para escolher a que melhora o
+resultado.
 
-As métricas são RMSE, MAE, \emph{skill} contra o \emph{random walk} e acerto de direção. PCA e fatores são
-estimados somente na janela de treino, sem usar informação futura. A análise em valor é a especificação
-principal; a análise em quantidade estimada é uma robustez para ITUB4.
+O benchmark é o \emph{random walk}: para a variação, a previsão é $\widehat{\Delta}=0$; para o nível, a
+previsão é $\widehat{y}_{t+h}=y_t$. As métricas são:
+\[
+RMSE_m=\sqrt{\frac{1}{N}\sum_{j=1}^N e_{m,j}^2},\qquad
+MAE_m=\frac{1}{N}\sum_{j=1}^N |e_{m,j}|,
+\]
+em que $e_{m,j}=y_j-\widehat{y}_{m,j}$ é o erro do modelo $m$. A \emph{skill} de RMSE é:
+\[
+\text{Skill}_{m}=100\times\frac{RMSE_{RW}-RMSE_m}{RMSE_{RW}}.
+\]
+Assim, valor positivo significa que o modelo reduziu erro contra o \emph{random walk}; valor negativo
+significa que piorou. O acerto de direção mede a fração de previsões em que o sinal previsto de mudança
+coincide com o sinal realizado.
+
+Para ITUB4, os testes de significância reportados nas tabelas são diagnósticos fora da amostra: um teste
+$t$ pareado da diferença de perda quadrática entre o modelo e o \emph{random walk}, e um teste binomial para
+o acerto de direção contra 50\%. No painel consolidado amplo, a inferência usa \emph{bootstrap} por data de
+origem, preservando a dependência transversal entre gestoras e ações observadas no mesmo mês. PCA e fatores
+são sempre estimados somente na janela de treino, sem usar informação futura. A análise em valor é a
+especificação principal; a análise em quantidade estimada é uma robustez para ITUB4.
+
+\begin{table}[H]\centering
+\caption{Protocolo dos testes de previsão.}
+\label{tab:forecastprotocol}
+\scriptsize
+\begin{tabular}{p{3.2cm}p{3.5cm}p{2.2cm}p{4.3cm}}
+\toprule
+\textbf{Exercício} & \textbf{Alvo} & \textbf{Horizonte} & \textbf{Inferência} \\
+\midrule
+Variação ITUB4 em valor & $\Delta$ posição em US\$ & 1 mês &
+Teste $t$ pareado da perda quadrática; binomial de direção \\
+Variação ITUB4 em quantidade & $\Delta$ quantidade estimada & 1 mês &
+Teste $t$ pareado da perda quadrática; binomial de direção \\
+Nível ITUB4 em valor & posição em US\$ & 1, 3 e 6 meses &
+Teste $t$ pareado da perda quadrática \\
+Nível ITUB4 em quantidade & quantidade estimada & 1, 3 e 6 meses &
+Teste $t$ pareado da perda quadrática \\
+Todas as ações, por ticker & posição em US\$ & 1 mês &
+Distribuição da \emph{skill} por ação; tickers degenerados marcados \\
+Painel consolidado final & posição em US\$ por gestora-ação & 1 mês &
+\emph{Bootstrap} por data de origem \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 A especificação consolidada final, implementada no script da rodada 23, usa a unidade gestora $\times$ ação
 $\times$ mês. Uma ação entra na avaliação quando tem ao menos cinco gestoras com histórico suficiente; uma
 gestora entra para uma ação quando aparece com ao menos 24 meses positivos. A
-janela mínima de treino é de 36 meses. Tickers com \emph{random walk} perfeito na amostra fora da amostra,
-como eventos societários ou séries degeneradas, são excluídos da métrica de \emph{skill}, pois o denominador
-do ganho relativo é zero. O AR individual é estimado como reversão à média e tem coeficiente de persistência
-limitado a $[0,0{,}995]$, para evitar extrapolações explosivas em séries curtas. Para avaliar significância
-agregada, o projeto usa \emph{bootstrap} por data de origem, preservando a dependência transversal entre
-gestoras e ações no mesmo mês.
+janela mínima de treino de 36 meses também é mantida aqui. Tickers com \emph{random walk} perfeito na
+amostra fora da amostra, como eventos societários ou séries degeneradas, são excluídos da métrica de
+\emph{skill}, pois o denominador do ganho relativo é zero. O AR individual é estimado como reversão à média
+e tem coeficiente de persistência limitado a $[0,0{,}995]$, para evitar extrapolações explosivas em séries
+curtas.
 
 \chapter{Resultados}
 
@@ -346,25 +415,60 @@ alvo econométrico continua sendo a exposição consolidada por gestora e ação
 \section{Previsão da variação mensal}
 
 Nas primeiras rodadas de forecasting, o alvo era a variação mensal da posição em US\$ para ITUB4. O
-resultado já era negativo e informativo: AR, média e PCA não superavam o \emph{random walk}. Ao refazer o
-exercício em quantidade estimada de ações, como robustez para separar preço e quantidade, a conclusão se
-mantém. O melhor modelo, AR encolhido, melhora apenas 0,6\% no RMSE e piora no MAE. A direção fica em torno
-de 50\%.
+resultado é negativo e informativo. A Tabela~\ref{tab:deltausd} mostra que o AR encolhido reduz o RMSE em
+0,97\%, mas o ganho não é estatisticamente robusto ($p=0{,}649$) e o MAE piora. O PCA com um fator fica
+estatisticamente pior que o \emph{random walk} no teste de perda quadrática ($p=0{,}046$), e o PCA com três
+fatores tem erro economicamente muito maior. A direção também não é previsível: os testes binomiais não
+rejeitam 50\% de acerto.
 
 \begin{table}[H]\centering
-\caption{Variação mensal da quantidade estimada de ITUB4: \emph{skill} contra random walk.}
-\small
-\begin{tabular}{lrrrr}
+\caption{Variação mensal da posição de ITUB4 em US\$: testes fora da amostra.}
+\label{tab:deltausd}
+\scriptsize
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-\textbf{Modelo} & \textbf{RMSE (mi ações)} & \textbf{Skill RMSE} & \textbf{Skill MAE} & \textbf{Direção} \\
+\textbf{Modelo} & \textbf{RMSE} & \textbf{MAE} & \textbf{Skill RMSE} &
+\textbf{$p$ perda} & \textbf{Direção} & \textbf{$p$ dir.} \\
 \midrule
-Random walk & 5,42 & 0,0\% & 0,0\% & -- \\
-AR encolhido & 5,39 & +0,6\% & -0,9\% & 50,4\% \\
-AR & 5,49 & -1,2\% & -4,9\% & 50,4\% \\
-PCA $k=1$ & 6,29 & -16,1\% & -13,0\% & 50,0\% \\
-PCA $k=3$ & 6,19 & -14,2\% & -25,8\% & 50,4\% \\
+Random walk    & 41,10 & 14,35 & 0,00\%   & --     & --     & -- \\
+AR encolhido   & 40,70 & 14,61 & +0,97\%  & 0,649  & 47,8\% & 0,152 \\
+AR             & 41,54 & 15,26 & -1,05\%  & 0,801  & 47,8\% & 0,152 \\
+PCA $k=1$      & 42,26 & 15,58 & -2,81\%  & 0,046  & 48,2\% & 0,233 \\
+PCA $k=3$      & 46,89 & 17,64 & -14,08\% & 0,155  & 50,8\% & 0,592 \\
 \bottomrule
 \end{tabular}
+\begin{flushleft}
+\scriptsize Nota: RMSE e MAE em US\$ milhões. $N=1.295$ previsões por modelo. O $p$ de perda testa a
+diferença de perda quadrática contra o \emph{random walk}; o sinal da \emph{skill} indica se a diferença
+favorece ou prejudica o modelo.
+\end{flushleft}
+\end{table}
+
+Ao refazer o exercício em quantidade estimada de ações, como robustez para separar preço e quantidade, a
+conclusão se mantém. A Tabela~\ref{tab:deltaqtd} mostra que o melhor modelo, AR encolhido, melhora apenas
+0,58\% no RMSE, piora no MAE e tem $p=0{,}752$ no teste de perda. Portanto, não há evidência estatística de
+previsibilidade mensal da quantidade de ações. Esse é um resultado central: a demanda mensal aproximada por
+ITUB4, medida em ações, se comporta de forma muito próxima a um \emph{random walk}.
+
+\begin{table}[H]\centering
+\caption{Variação mensal da quantidade estimada de ITUB4: testes fora da amostra.}
+\label{tab:deltaqtd}
+\scriptsize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Modelo} & \textbf{RMSE} & \textbf{MAE} & \textbf{Skill RMSE} &
+\textbf{$p$ perda} & \textbf{Direção} & \textbf{$p$ dir.} \\
+\midrule
+Random walk    & 5,42 & 2,02 & 0,00\%   & --     & --     & -- \\
+AR encolhido   & 5,39 & 2,04 & +0,58\%  & 0,752  & 50,4\% & 0,811 \\
+AR             & 5,49 & 2,12 & -1,25\%  & 0,728  & 50,4\% & 0,811 \\
+PCA $k=1$      & 6,29 & 2,28 & -16,08\% & 0,301  & 50,0\% & 1,000 \\
+PCA $k=3$      & 6,19 & 2,54 & -14,19\% & 0,119  & 50,4\% & 0,811 \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\scriptsize Nota: RMSE e MAE em milhões de ações. $N=1.295$ previsões por modelo.
+\end{flushleft}
 \end{table}
 
 \begin{figure}[H]\centering
@@ -374,15 +478,43 @@ PCA $k=3$ & 6,19 & -14,2\% & -25,8\% & 50,4\% \\
 \end{figure}
 
 A leitura é que a variação mensal, tanto em valor quanto em quantidade aproximada, é difícil de prever com
-modelos lineares simples. Esse resultado não encerra a pergunta; ele motiva usar informação adicional de
-mercado e, em uma extensão, informação de rede.
+modelos lineares simples. Esse resultado não encerra a pergunta; ele motiva olhar para o nível da exposição,
+para janelas de previsão maiores e para informação adicional de mercado. O ponto estatístico, porém, é
+claro: nos testes mensais de variação, nenhum modelo entrega melhora robusta sobre o \emph{random walk}.
 
 \section{Previsão do nível e reversão à média}
 
 Ao mudar o alvo para o nível da posição em valor, aparece previsibilidade. Para ITUB4, o AR individual reduz
 o RMSE em cerca de 10\% contra o \emph{random walk} nos horizontes de 1 e 3 meses. O modelo de painel melhora
 em horizontes mais longos, chegando a 9\% no horizonte de 6 meses. Esse resultado é relevante para risco
-patrimonial, mas não deve ser interpretado automaticamente como previsibilidade de compras e vendas de ações.
+patrimonial, mas não deve ser interpretado automaticamente como previsibilidade de compras e vendas de
+ações. A Tabela~\ref{tab:leveltests} torna a leitura mais precisa: em ITUB4, a magnitude da melhora em valor
+é economicamente relevante, mas os testes pareados de perda não rejeitam igualdade contra o \emph{random
+walk} nos níveis convencionais. Portanto, a conclusão correta não é ``o AR vence estatisticamente em
+ITUB4'', e sim: ``ITUB4 sugere reversão à média em valor, que precisa ser checada em amostra mais ampla''.
+
+\begin{table}[H]\centering
+\caption{Nível de ITUB4: \emph{skill} de RMSE e teste de perda contra random walk.}
+\label{tab:leveltests}
+\scriptsize
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Alvo} & \textbf{$h$} & \textbf{AR indiv.} & \textbf{$p$} &
+\textbf{AR painel} & \textbf{$p$} \\
+\midrule
+Valor em US\$ & 1 & +10,0\% & 0,231 & +3,3\%  & 0,300 \\
+Valor em US\$ & 3 & +10,2\% & 0,186 & +7,8\%  & 0,198 \\
+Valor em US\$ & 6 & +7,1\%  & 0,461 & +9,0\%  & 0,298 \\
+Quantidade    & 1 & +3,5\%  & 0,627 & -0,3\%  & 0,885 \\
+Quantidade    & 3 & -2,6\%  & 0,642 & -1,6\%  & 0,690 \\
+Quantidade    & 6 & -13,9\% & 0,067 & -11,1\% & 0,079 \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\scriptsize Nota: $h$ é o horizonte em meses. O $p$ testa a diferença de perda quadrática contra o
+\emph{random walk}. Para quantidade, os horizontes de 3 e 6 meses pioram contra o benchmark.
+\end{flushleft}
+\end{table}
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.88\textwidth]{forecast_round3_skill.png}
@@ -407,6 +539,21 @@ meia-vida mediana é 2,8 meses. Para a quantidade estimada, 33 de 37 gestoras re
 para aproximadamente 0,83, a meia-vida mediana vai para 3,8 meses e a meia-vida de painel chega a 6,0 meses.
 Isso sugere que a demanda em ações é mais persistente e menos previsível do que a exposição em valor.
 
+\begin{table}[H]\centering
+\caption{Meia-vida da reversão à alocação-alvo em ITUB4.}
+\label{tab:halflife}
+\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Alvo} & \textbf{Revertem} & \textbf{$\rho$ med.} &
+\textbf{MV med.} & \textbf{MV painel} \\
+\midrule
+Posição em US\$ & 36/37 & 0,77 & 2,8 meses & 2,6 meses \\
+Quantidade estimada & 33/37 & 0,83 & 3,8 meses & 6,0 meses \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \begin{figure}[H]\centering
 \includegraphics[width=0.76\textwidth]{half_life_hist.png}
 \caption{Meia-vida da reversão à alocação-alvo em ITUB4.}
@@ -421,11 +568,48 @@ Isso sugere que a demanda em ações é mais persistente e menos previsível do 
 
 \section{Generalização do forecasting}
 
-A rodada com todas as ações, ainda em valor, mostra que a previsibilidade do nível não é geral. Entre 238
-ações elegíveis, a mediana da \emph{skill} é negativa e apenas uma parcela pequena supera o \emph{random
-walk}. ITUB4 fica entre as melhores, com \emph{skill} próxima de 9,9\%, ao lado de outras ações muito
-líquidas e amplamente detidas. Essa evidência deve ser lida como resultado de exposição patrimonial; a
-generalização para quantidade exigiria baixar e validar preços mensais para todos os tickers.
+A rodada com todas as ações, ainda em valor, mostra que a previsibilidade do nível não é geral. O exercício
+identifica 238 ações inicialmente avaliáveis; três são degeneradas para \emph{skill}, pois o \emph{random
+walk} tem erro zero fora da amostra. A amostra válida, portanto, tem 235 ações. A mediana da \emph{skill} é
+negativa e apenas 10,2\% das ações superam o \emph{random walk}. ITUB4 fica entre as melhores, com
+\emph{skill} de 9,9\%, ao lado de PETR3 e ITSA4. Essa evidência deve ser lida como resultado de exposição
+patrimonial; a generalização para quantidade exigiria baixar e validar preços mensais para todos os tickers.
+
+\begin{table}[H]\centering
+\caption{Generalização por ação: distribuição da skill do AR contra random walk.}
+\label{tab:round5summary}
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Métrica} & \textbf{Valor} \\
+\midrule
+Ações inicialmente avaliáveis & 238 \\
+Tickers degenerados removidos & 3 \\
+Ações válidas para skill & 235 \\
+Skill mediana & -13,4\% \\
+Ações com skill positiva & 10,2\% \\
+Posição de ITUB4 no ranking & 3 de 235 \\
+Skill de ITUB4 & +9,9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]\centering
+\caption{Ações com maior skill no forecast do nível em valor.}
+\label{tab:round5top}
+\small
+\begin{tabular}{lrr}
+\toprule
+\textbf{Ticker} & \textbf{Gestoras} & \textbf{Skill RMSE} \\
+\midrule
+GOLL12 & 17 & +23,7\% \\
+CGAS5  & 19 & +13,5\% \\
+ITUB4  & 36 & +9,9\% \\
+PETR3  & 35 & +9,7\% \\
+ITSA4  & 34 & +9,6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.82\textwidth]{forecast_round5_skill_hist.png}
@@ -446,23 +630,30 @@ a avaliação contém 235 ações e 183.924 previsões por modelo. A Tabela~\ref
 \emph{random walk} continua sendo o benchmark mais difícil. AR individual, AR de painel, $n-1$ e fator comum
 ficam levemente piores em RMSE e MAE. O coeficiente mediano do componente $n-1$ é 0,0054, praticamente zero,
 e o coeficiente mediano do fator comum é 0,0009. O \emph{bootstrap} por mês não indica melhora
-estatisticamente robusta de nenhum modelo contra o \emph{random walk}.
+estatisticamente robusta de nenhum modelo contra o \emph{random walk}; em todos os casos, o intervalo de
+\emph{bootstrap} da melhora média cruza zero.
 
 \begin{table}[H]\centering
 \caption{Forecast consolidado do nível da exposição em US\$ para todas as ações elegíveis.}
 \label{tab:consolforecast}
-\small
-\begin{tabular}{lrrrr}
+\scriptsize
+\begin{tabular}{lrrrrr}
 \toprule
-\textbf{Modelo} & \textbf{RMSE} & \textbf{MAE} & \textbf{Skill RMSE} & \textbf{Direção} \\
+\textbf{Modelo} & \textbf{RMSE} & \textbf{MAE} & \textbf{Skill RMSE} &
+\textbf{Direção} & \textbf{$p$ boot.} \\
 \midrule
-Random walk     & 10.752 & 2.638 & 0,00\%  & -- \\
-AR1 painel      & 10.855 & 2.786 & -0,96\% & 51,9\% \\
-$n-1$ painel    & 10.869 & 2.869 & -1,09\% & 51,0\% \\
-AR1 individual  & 10.870 & 2.821 & -1,10\% & 51,9\% \\
-Fator comum     & 10.874 & 2.878 & -1,14\% & 51,0\% \\
+Random walk     & 10.752 & 2.638 & 0,00\%  & --     & -- \\
+AR1 painel      & 10.855 & 2.786 & -0,96\% & 51,9\% & 0,777 \\
+$n-1$ painel    & 10.869 & 2.869 & -1,09\% & 51,0\% & 0,814 \\
+AR1 individual  & 10.870 & 2.821 & -1,10\% & 51,9\% & 0,778 \\
+Fator comum     & 10.874 & 2.878 & -1,14\% & 51,0\% & 0,829 \\
 \bottomrule
 \end{tabular}
+\begin{flushleft}
+\scriptsize Nota: RMSE e MAE em US\$ milhões. $N=183.924$ previsões por modelo. O $p$ bootstrap testa
+melhora sobre o \emph{random walk} reamostrando por data de origem; valores altos indicam ausência de
+melhora robusta.
+\end{flushleft}
 \end{table}
 
 \begin{figure}[H]\centering
