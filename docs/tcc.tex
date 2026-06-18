@@ -23,7 +23,7 @@
 \vspace*{1cm}
 {\scshape\large Fundação Getulio Vargas \\ Escola de Economia de São Paulo (EESP)\par}
 \vspace{2.5cm}
-{\huge\bfseries Forecasting da exposição de gestoras a ações em redes de fundos\par}
+{\huge\bfseries Forecasting consolidado da exposição de gestoras a ações\par}
 \vspace{0.8cm}
 {\Large Evidência do mercado brasileiro de fundos, 2016--2021\par}
 \vspace{3cm}
@@ -39,21 +39,22 @@
 
 \chapter*{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
-Este trabalho mede a exposição das gestoras brasileiras a ações e formula um sistema de previsão inspirado
-em \emph{demand-based asset pricing}. A unidade empírica é gestora $\times$ mês $\times$ ação: para cada ação,
-observa-se quais gestoras aumentaram ou reduziram exposição e testa-se se esse movimento pode ser previsto a
-partir do próprio histórico, do restante do mercado e da rede de fundos interconectados. O núcleo empírico usa
-as bases CONS e SH da CVM para medir exposição em R\$ e US\$ e a CDA Bloco~2 para reconstruir relações
-fundo$\to$fundo, necessárias para representar estruturas FIC/master como grafo.
+Este trabalho mede e prevê a exposição consolidada das gestoras brasileiras a ações, inspirado pela literatura
+de \emph{demand-based asset pricing}. A unidade empírica central é gestora $\times$ mês $\times$ ação:
+para cada ação, observa-se mês a mês quais gestoras aumentaram ou reduziram exposição e testa-se se a
+exposição futura pode ser prevista a partir do histórico da própria gestora e do comportamento do restante do
+mercado, isto é, das demais gestoras. O núcleo empírico usa as bases CONS e SH da CVM para construir um
+painel consolidado de exposição em R\$ e US\$, por gestora e por ação, com validação inicial em ITUB4 e
+extensão para todos os tickers identificáveis.
 
-O resultado central de dados é que a exposição institucional é concentrada em \emph{blue chips} e que as
-estruturas fundo-sobre-fundo são economicamente relevantes. A rede CDA não apresenta ciclos nos 72 meses
-analisados, respondendo à preocupação com estruturas circulares, mas revela profundidade de aninhamento e
-duplicação material: em ITUB4, a soma bruta intra-gestora é cerca de 37,6\% maior do que a exposição
-de-duplicada. No forecasting, os modelos lineares e fatoriais mostram que a variação mensal é difícil de
-prever; já o nível da exposição em valor apresenta alguma reversão à média. A quantidade estimada de ITUB4,
-construída com preço B3/COTAHIST, entra como robustez para separar preço de quantidade. Ela confirma que a
-demanda aproximada em ações é mais ruidosa do que a exposição patrimonial em valor.
+O resultado central de dados é que a exposição institucional é concentrada em \emph{blue chips}, exatamente
+os ativos em que a literatura de demanda e propriedade comum sugere maior relevância para preços e risco. No
+forecasting, modelos lineares e fatoriais mostram que a variação mensal é difícil de prever; já o nível da
+exposição em valor apresenta alguma reversão à média, especialmente em ações muito líquidas e amplamente
+detidas. A quantidade estimada de ITUB4, construída com preço B3/COTAHIST, entra como robustez para separar
+preço de quantidade. A CDA Bloco~2 não substitui esse núcleo consolidado: ela é tratada em apêndice técnico,
+com detalhe, para reconstruir a rede fundo$\to$fundo apagada pela CONS, avaliar aninhamento, testar
+circularidade e fundamentar extensões futuras com modelos de grafo.
 
 \noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de investimento; exposição em ações;
 forecasting; redes; CVM.
@@ -65,42 +66,51 @@ forecasting; redes; CVM.
 
 \chapter{Introdução}
 
-O objetivo deste trabalho é medir e prever a exposição das gestoras brasileiras a ações usando informação de
-carteiras e de redes de fundos. A pergunta empírica nasce de uma ideia simples: se investidores
-institucionais têm demandas persistentes por ativos, então as carteiras observadas podem conter informação
-sobre comportamento futuro. A literatura de \emph{demand-based asset pricing} fornece a motivação: preços não
-são determinados apenas por fundamentos agregados, mas também pela demanda de investidores com restrições,
-preferências e mandatos específicos \citep{koijenyogo2019,gabaixkoijen2021}.
+O objetivo deste trabalho é medir e prever a exposição consolidada das gestoras brasileiras a ações. A
+pergunta empírica nasce de uma ideia simples: se investidores institucionais têm demandas persistentes por
+ativos, então carteiras observadas podem conter informação sobre comportamento futuro. A literatura de
+\emph{demand-based asset pricing} fornece a motivação: preços não são determinados apenas por fundamentos
+agregados, mas também pela demanda de investidores com restrições, preferências e mandatos específicos
+\citep{koijenyogo2019,gabaixkoijen2021}.
 
 O caso brasileiro é adequado para esse exercício porque a CVM disponibiliza bases públicas de fundos. A CONS
 permite observar a composição consolidada das carteiras e a SH permite associar cada fundo à sua gestora e
 ao seu patrimônio líquido. Essas bases permitem medir exposição em valor, em R\$ e US\$, que é a medida mais
-direta de escala econômica e risco patrimonial. A dificuldade é que a CONS, por ser consolidada, apaga o
-caminho de fundos investindo em fundos. Para construir um sistema preditivo por grafo, o trabalho usa a CDA
-Bloco~2, que registra cotas de fundos e permite recuperar as arestas fundo$\to$fundo.
+direta de escala econômica e risco patrimonial. A previsão é feita de forma consolidada por gestora: para
+cada ação e mês, mede-se quem aumentou ou reduziu exposição; para cada gestora, usa-se seu próprio histórico
+e o comportamento das demais gestoras, o ``restante do mercado'' ou $n-1$, para prever exposição futura.
 
-O desenho preditivo é: para cada ação e mês, medir quem aumentou ou reduziu exposição; para cada gestora,
-usar seu próprio histórico, o comportamento das demais gestoras (o ``restante do mercado'', ou $n-1$) e a
-rede de fundos interconectados como informação para prever exposição futura. A quantidade estimada de ações,
-construída para ITUB4 com fechamento B3/COTAHIST \citep{b3_cotahist}, é mantida como robustez conceitual:
-ela ajuda a separar efeito de preço de mudança aproximada de quantidade, mas a medida principal de exposição
-do trabalho permanece em valor.
+A quantidade estimada de ações é construída para ITUB4 com o fechamento oficial mensal da B3
+\citep{b3_cotahist}. Ela é mantida como robustez conceitual, pois ajuda a separar efeito de preço de mudança
+aproximada de quantidade,
+mas a medida principal de exposição do trabalho permanece em valor. A CDA Bloco~2, por sua vez, entra como
+apêndice técnico: a CONS é consolidada e apaga o caminho de fundos investindo em fundos; a CDA recupera esse
+caminho e permite visualizar a rede fundo$\to$fundo. No desenho atual, não se prevê o grafo em si. O alvo da
+previsão é a exposição consolidada. A rede é uma forma de representar interconexões e uma possível camada
+futura de features ou modelos de grafo.
 
 O trabalho responde a cinco perguntas:
 \begin{enumerate}
 \item Como medir a exposição das gestoras a ações em R\$ e US\$, com tratamento consistente de empréstimos de
 ações e grupos econômicos?
-\item Como reconstruir a rede fundo$\to$fundo que a CONS apaga ao consolidar carteiras?
-\item Existem circularidades ou aninhamentos profundos nas estruturas FIC/master?
-\item A exposição futura de uma gestora pode ser prevista a partir do próprio histórico, do restante do
-mercado e da rede?
+\item A exposição futura de uma gestora pode ser prevista a partir do próprio histórico e do restante do
+mercado?
+\item A diferença entre exposição em valor e quantidade estimada muda a interpretação de demanda?
 \item A evidência inicial de ITUB4 se generaliza para outras ações?
+\item Como a rede fundo$\to$fundo, reconstruída pela CDA em apêndice, qualifica a interpretação de risco e
+prepara uma extensão com modelos de grafo?
 \end{enumerate}
 
+\begin{figure}[H]\centering
+\includegraphics[width=0.92\textwidth]{research_design_graph.png}
+\caption{Desenho empírico: núcleo consolidado e apêndice de rede.}
+\label{fig:design}
+\end{figure}
+
 Assim, a CDA não entra como base alternativa à CONS. As duas têm funções diferentes. A CONS mede a exposição
-final em ações; a CDA recupera o caminho de fundos sobre fundos que pode ser usado para modelar propagação,
-duplicação e risco de estruturas interconectadas. Os detalhes de tratamento da CDA permanecem no
-Apêndice~\ref{ap:cda}, mas a motivação da rede faz parte do núcleo do trabalho.
+final em ações e sustenta o forecasting consolidado; a CDA recupera o caminho de fundos sobre fundos e
+documenta uma camada de rede que pode ser usada para risco, de-duplicação e extensões de graph learning. Os
+detalhes de tratamento da CDA ficam no Apêndice~\ref{ap:cda}.
 
 \chapter{Revisão Bibliográfica}
 
@@ -131,11 +141,10 @@ referência metodológica usada no projeto é \citet{artesbarroso2023}. Empirica
 na janela de treino para evitar vazamento de informação.
 
 Redes neurais em grafo são mencionadas como possibilidade metodológica, com referência introdutória em
-\citet{sanchezlengeling2021}. A motivação é direta: se fundos de uma gestora estão conectados a outros fundos
-por relações de cotas, então a exposição de uma gestora pode depender não apenas de seu próprio histórico,
-mas também da vizinhança no grafo. Neste estágio, o trabalho implementa baselines lineares, PCA/fatores e uma
-primeira feature de rede. O passo metodológico natural é transformar essa estrutura em um modelo de previsão
-por grafo, no qual nós representam fundos ou gestoras e arestas representam posições fundo$\to$fundo.
+\citet{sanchezlengeling2021}. A motivação é direta: se fundos estão conectados por relações de cotas, então
+essa estrutura pode ser transformada em uma matriz de adjacência e usada como informação para prever
+exposição. Ainda assim, o alvo deste TCC não é prever a topologia da rede. O alvo é a exposição consolidada
+por gestora e ação. A rede CDA é documentada como apêndice e como extensão metodológica possível.
 
 \section{Plataformas de investimento}
 
@@ -147,9 +156,9 @@ cautela.
 
 \chapter{Metodologia e Dados}
 
-\section{Bases do núcleo empírico}
+\section{Bases do núcleo empírico consolidado}
 
-O núcleo do trabalho usa três bases públicas da CVM e uma base auxiliar de preços da B3:
+O núcleo do trabalho usa duas bases públicas da CVM e uma base auxiliar de preços da B3:
 
 \paragraph{CONS.} A composição consolidada de carteiras tem granularidade fundo $\times$ mês $\times$ ativo.
 No período 2016--2021, a amostra tratada contém aproximadamente 21,1 milhões de linhas. A base é 100\%
@@ -160,11 +169,6 @@ científica.
 \paragraph{SH.} A série histórica dos fundos tem granularidade fundo $\times$ dia e traz informações de
 gestora, classificação, nome do fundo e patrimônio líquido. O PL vem em formato brasileiro e é convertido
 para número com parser específico.
-
-\paragraph{CDA Bloco 2.} A Composição e Diversificação das Aplicações (CDA) informa posições de fundos em
-cotas de outros fundos. O Bloco~2 é usado para reconstruir arestas fundo$\to$fundo. Essa base é necessária
-para a camada de rede do sistema preditivo, pois a CONS, ao consolidar a carteira, mostra o ativo final mas
-não preserva a trajetória FIC/master.
 
 \paragraph{B3/COTAHIST.} A CONS não informa quantidade de ações. Para converter a posição em ITUB4 de valor
 para quantidade estimada, usa-se o fechamento diário oficial da B3/COTAHIST, mercado à vista
@@ -186,7 +190,6 @@ Os principais tratamentos são:
 \item classificação das variantes de exposição em direta, cedida e obrigação;
 \item consolidação de gestoras por grupo econômico via regras de texto;
 \item conversão de R\$ para US\$ com PTAX de fim de mês (BCB SGS série~1);
-\item reconstrução da rede fundo$\to$fundo com a CDA Bloco~2;
 \item conversão auxiliar de valor de ITUB4 para quantidade estimada de ações com fechamento mensal B3/COTAHIST;
 \item construção de deltas mensais apenas quando os meses são consecutivos.
 \end{itemize}
@@ -208,28 +211,21 @@ A definição principal é \emph{net}. No período, a soma das posições mensai
 definição direta, R\$\,540 bi na definição long e R\$\,496 bi na definição net. A definição net gera 264
 observações gestora-mês com posição líquida negativa, evidenciando a relevância do aluguel de ações.
 
-\section{Rede de fundos e problema preditivo}
+\section{Problema preditivo consolidado}
 
-A motivação de rede vem do fato de que fundos de cotas podem investir em outros fundos. Nesses casos, a
-exposição de uma gestora a uma ação pode refletir posições diretas de seus fundos, posições indiretas via
-fundos investidos e conexões com outras estruturas. A CDA Bloco~2 permite reconstruir essas conexões como um
-grafo direcionado, em que a aresta $A\to B$ significa que o fundo A detém cotas do fundo B.
-
-O problema preditivo pode ser escrito em três níveis. No nível básico, para cada gestora $g$, ação $i$ e mês
-$t$, observa-se a exposição $E_{g,i,t}$ e sua variação $\Delta E_{g,i,t}$. No nível de mercado, o conjunto
-das demais gestoras, $-g$, resume o comportamento do restante do mercado naquela ação. No nível de rede, as
-arestas da CDA informam quais fundos ou gestoras estão próximos no grafo. O sistema de previsão, portanto,
+O problema preditivo do corpo do trabalho é consolidado por gestora. Para cada gestora $g$, ação $i$ e mês
+$t$, observa-se a exposição $E_{g,i,t}$ e sua variação $\Delta E_{g,i,t}$. O conjunto das demais gestoras,
+$-g$, resume o comportamento do restante do mercado naquela ação. Em termos gerais, o sistema de previsão
 procura usar:
 \[
 \widehat{E}_{g,i,t+1}
-= f(E_{g,i,\leq t}, E_{-g,i,\leq t}, G_t),
+= f(E_{g,i,\leq t}, E_{-g,i,\leq t}),
 \]
-em que $G_t$ é o grafo fundo-sobre-fundo observado no mês $t$.
-
-Neste estágio, o trabalho implementa baselines transparentes: \emph{random walk}, AR, modelos de painel,
-PCA/fatores e uma primeira feature de rede baseada na exposição de vizinhos. A formulação por GNN é o
-próximo passo natural: ela permitiria aprender pesos a partir do grafo, em vez de impor manualmente uma média
-de vizinhos.
+em que $E_{-g,i,\leq t}$ representa a informação agregada ou cruzada do restante do mercado. Neste estágio,
+o trabalho implementa baselines transparentes: \emph{random walk}, AR, modelos de painel e PCA/fatores. A
+CDA aparece no Apêndice~\ref{ap:cda} como camada adicional: ela permite escrever uma extensão
+$f(E_{g,i,\leq t}, E_{-g,i,\leq t}, G_t)$, em que $G_t$ é o grafo fundo-sobre-fundo. Essa extensão usa o
+grafo como informação, mas o alvo continua sendo a exposição consolidada, não a rede futura.
 
 \section{Quantidade estimada de ações}
 
@@ -327,42 +323,14 @@ fragilidade por propriedade comum.
 \label{fig:crowd}
 \end{figure}
 
-\section{Rede fundo-sobre-fundo e duplicação}
+\section{Leitura complementar da rede}
 
-A CDA Bloco~2 reconstrói 835.694 arestas fundo$\to$fundo no período 2016--2021. A primeira pergunta de risco
-é se existem estruturas circulares. No subgrafo dos fundos observados no universo empírico, a resposta é
-negativa: todos os 72 meses são DAGs. Ou seja, não encontramos ciclos diretos que fariam um FIC retornar ao
-próprio caminho de investimento. Ao mesmo tempo, há aninhamento relevante: a profundidade máxima tem mediana
-7 e máximo 9 níveis.
-
-\begin{table}[H]\centering
-\caption{Estrutura da rede CDA no universo observado.}
-\small
-\begin{tabular}{lr}
-\toprule
-\textbf{Métrica} & \textbf{Valor} \\
-\midrule
-Arestas CDA processadas & 835.694 \\
-Meses analisados & 72 \\
-Meses com ciclos & 0 \\
-Profundidade máxima mediana & 7 \\
-Profundidade máxima observada & 9 \\
-Nós no último mês & 2.565 \\
-Arestas no último mês & 5.968 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-A segunda pergunta é quanto a soma de fundos da mesma gestora duplica exposição. Para ITUB4, a exposição
-bruta intra-gestora soma R\$\,496,5 bi ao longo dos meses; após remover a parcela indireta estimada via
-relações FIC/master da própria gestora, a exposição cai para R\$\,309,8 bi. A duplicação interna estimada é
-37,6\%. No caso do Itaú, a duplicação média é 41,7\%.
-
-\begin{figure}[H]\centering
-\includegraphics[width=0.82\textwidth]{itub4_dedup_itau.png}
-\caption{Itaú: exposição bruta e de-duplicada em ITUB4.}
-\label{fig:dedup}
-\end{figure}
+Como a previsão do corpo do trabalho é consolidada por gestora, a rede fundo-sobre-fundo não é necessária
+para construir o painel principal. Ainda assim, ela é importante para interpretar risco e para preparar uma
+extensão metodológica com grafos. O Apêndice~\ref{ap:cda} documenta a CDA Bloco~2 em detalhe: leitura da
+base, filtros, validações, visualizações de grafo, teste de circularidade, profundidade de aninhamento e
+de-duplicação intra-gestora. A leitura correta é que a rede fundamenta uma possível camada de informação; o
+alvo econométrico continua sendo a exposição consolidada por gestora e ação.
 
 \section{Previsão da variação mensal}
 
@@ -396,7 +364,7 @@ PCA $k=3$ & 6,19 & -14,2\% & -25,8\% & 50,4\% \\
 
 A leitura é que a variação mensal, tanto em valor quanto em quantidade aproximada, é difícil de prever com
 modelos lineares simples. Esse resultado não encerra a pergunta; ele motiva usar informação adicional de
-mercado e de rede.
+mercado e, em uma extensão, informação de rede.
 
 \section{Previsão do nível e reversão à média}
 
@@ -454,39 +422,39 @@ generalização para quantidade exigiria baixar e validar preços mensais para t
 \label{fig:r5}
 \end{figure}
 
-\section{Rede como preditor complementar}
+\section{Teste complementar com rede}
 
 Uma especificação complementar adiciona a exposição dos vizinhos no grafo CDA como preditor do nível da
 posição. O resultado não melhora o baseline de reversão à média: AR1 de painel tem \emph{skill} de 3,3\%,
 enquanto o modelo com rede tem 3,1\%. Esse resultado deve ser lido com cautela. Ele não descarta o uso de
 redes; mostra apenas que uma feature manual simples, baseada em média de vizinhos, não basta para superar o
-AR de painel. O próximo passo coerente com a motivação do trabalho é formular um modelo de grafo mais
-expressivo, em que a rede CDA e o comportamento do restante do mercado sejam usados conjuntamente para prever
-exposição por gestora e por ação.
+AR de painel. Como a previsão principal é consolidada, esse teste é apresentado como extensão: o próximo
+passo metodológico seria comparar uma versão com grafo, usando CDA e restante do mercado, contra os baselines
+consolidados já estimados.
 
 \chapter{Conclusão}
 
 O projeto entrega cinco conclusões principais. Primeiro, é possível construir um painel mensal coerente de
-exposição das gestoras a ações usando CONS e SH, com tratamento cuidadoso de formato numérico, empréstimos de
-ações, grupos econômicos, R\$ e US\$. Segundo, a CDA Bloco~2 é a base adequada para recuperar a rede
-fundo$\to$fundo que a CONS apaga ao consolidar carteiras. Terceiro, essa rede não apresenta ciclos no período
-analisado, mas tem aninhamento relevante e gera duplicação intra-gestora material. Quarto, a variação mensal
-da exposição é difícil de prever com modelos lineares simples; o \emph{random walk} é um benchmark forte.
-Quinto, o nível da exposição em valor apresenta alguma reversão à média, especialmente em ITUB4, mas a
-quantidade estimada mostra que parte dessa reversão patrimonial não deve ser confundida com compra e venda
-previsível de ações.
+exposição consolidada das gestoras a ações usando CONS e SH, com tratamento cuidadoso de formato numérico,
+empréstimos de ações, grupos econômicos, R\$ e US\$. Segundo, a exposição institucional é concentrada em
+\emph{blue chips}, o que conecta o exercício à literatura de demanda por ações e fragilidade por propriedade
+comum. Terceiro, a variação mensal da exposição é difícil de prever com modelos lineares simples; o
+\emph{random walk} é um benchmark forte. Quarto, o nível da exposição em valor apresenta alguma reversão à
+média, especialmente em ITUB4 e em ações muito líquidas. Quinto, a quantidade estimada mostra que parte da
+reversão patrimonial em valor não deve ser confundida com compra e venda previsível de ações.
 
 A interpretação econômica é alinhada à literatura de demanda por ações. Carteiras observadas revelam demanda
 institucional e permitem estudar quem aumenta ou reduz exposição em cada ação. Ao mesmo tempo, a estrutura de
-fundos interconectados adiciona uma dimensão de risco: a exposição final não depende apenas da gestora
-isolada, mas também de como seus fundos estão ligados a outros fundos. Portanto, o caminho natural do TCC é
-um sistema de previsão de exposição por gestora e ação, usando histórico próprio, restante do mercado e rede
-fundo-sobre-fundo.
+fundos interconectados adiciona uma dimensão de risco, documentada no apêndice CDA: a exposição final pode
+passar por estruturas FIC/master e por camadas de fundos sobre fundos. Portanto, o caminho natural do TCC é
+um sistema de previsão consolidada de exposição por gestora e ação, usando histórico próprio e restante do
+mercado como núcleo; a rede entra como extensão para enriquecer features e interpretar risco.
 
 O resultado negativo da feature manual de rede não fecha a questão. Ele funciona como baseline: uma média de
 vizinhos não acrescenta sinal suficiente, mas um modelo de grafo mais flexível ainda é metodologicamente
-coerente com o problema. A próxima etapa é formalizar essa previsão em painel gestora $\times$ ação $\times$
-mês, com features de mercado e de rede, e comparar o ganho preditivo contra \emph{random walk}, AR e fatores.
+coerente como extensão. A próxima etapa é formalizar a previsão em painel gestora $\times$ ação $\times$ mês,
+com features do restante do mercado, e então comparar uma versão com grafo contra \emph{random walk}, AR,
+painel e fatores.
 
 \appendix
 \chapter{Apêndice: CDA e Estruturas Fundo-Sobre-Fundo}\label{ap:cda}
@@ -495,8 +463,15 @@ mês, com features de mercado e de rede, e comparar o ganho preditivo contra \em
 
 A CONS é consolidada: ela mostra os ativos finais da carteira, mas apaga relações entre fundos. Se um FIC
 investe em um master que detém ações, a CONS mostra a exposição final em ações. Isso é ótimo para medir
-exposição, mas insuficiente para estudar a estrutura fundo$\to$fundo. A CDA Bloco~2 entra para reconstruir
-essa rede, que é a base natural para modelos de previsão via grafos.
+exposição consolidada, que é o núcleo do TCC. Porém, isso é insuficiente para estudar a estrutura
+fundo$\to$fundo. A CDA Bloco~2 entra somente para esse segundo objetivo: reconstruir a rede de cotas de
+fundos, avaliar se há circularidade, medir profundidade de aninhamento e produzir uma base auditável para
+extensões de graph learning.
+
+Essa distinção é essencial. O TCC não depende da CDA para medir exposição em ITUB4, para construir o painel
+gestora $\times$ ação $\times$ mês, nem para rodar os baselines principais de forecasting. O alvo principal
+também não é prever a rede. O alvo é prever exposição consolidada. O grafo CDA é uma camada auxiliar para
+entender a estrutura dos fundos e, no futuro, usar essa estrutura como informação adicional.
 
 \section{O que é a CDA Bloco 2}
 
@@ -514,14 +489,53 @@ Nos arquivos históricos processados, \texttt{DT\_CONFID\_APLIC} aparece preench
 mas \texttt{CNPJ\_FUNDO\_COTA} está disponível e destino vazio é zero. Portanto, o projeto não trata esse
 campo como sinônimo de destino mascarado.
 
-\section{Construção da base}
+\section{Por que uma leitura simples da CDA fica ruim}
 
-O script \texttt{R/10\_build\_cda\_edges.R} lê os ZIPs históricos da CVM, seleciona o arquivo
-\texttt{cda\_fi\_BLC\_2\_AAAA.csv}, normaliza os CNPJs e filtra arestas cuja origem está no universo de
-fundos observado na SH. A saída é \texttt{data/processed/cda\_edges.csv}, com 835.694 arestas em 72 meses.
+Uma tentativa como \texttt{read\_csv("C:/Users/joaoz/Downloads/CDA/cad\_fi.csv")} não reproduz o tratamento
+usado aqui por três motivos.
+
+Primeiro, o arquivo relevante para a rede não é um cadastro genérico de fundos, mas o arquivo histórico
+anual do documento CDA, especificamente o arquivo do Bloco~2 dentro dos ZIPs anuais da CVM. Segundo, os
+arquivos da CVM usam separador ponto-e-vírgula e encoding
+\texttt{latin1}; por isso, uma leitura automática com vírgula pode quebrar colunas, acentos e tipos. Terceiro,
+o arquivo bruto contém muito mais informação do que o necessário. O projeto seleciona apenas as colunas
+necessárias para construir arestas fundo$\to$fundo e filtra a origem para fundos pertencentes ao universo
+CONS+SH.
+
+O tratamento usado no projeto está em \texttt{R/10\_build\_cda\_edges.R}. A sequência é:
+\begin{enumerate}
+\item baixar, quando necessário, os ZIPs anuais da CVM para 2016--2021;
+\item abrir de dentro do ZIP o arquivo \texttt{cda\_fi\_BLC\_2\_AAAA.csv}, sem extrair todo o ZIP para disco;
+\item ler o conteúdo com \texttt{sep=";"} e encoding \texttt{latin1};
+\item selecionar as cinco colunas essenciais: fundo de origem, data, valor de mercado, fundo investido e
+campo de confidencialidade;
+\item normalizar CNPJs para 14 dígitos;
+\item converter \texttt{DT\_COMPTC} para data e \texttt{VL\_MERC\_POS\_FINAL} para número;
+\item manter apenas arestas cuja origem aparece no universo de fundos do projeto;
+\item marcar se o destino também pertence ao universo CONS+SH.
+\end{enumerate}
+
+A saída processada é \texttt{data/processed/cda\_edges.csv}, com uma linha por posição fundo$\to$fundo
+observada no Bloco~2. As colunas finais são:
+\[
+\{\texttt{ano},\texttt{data},\texttt{cnpj\_fundo},\texttt{cnpj\_cota},\texttt{valor\_brl},
+\texttt{confidencial},\texttt{dentro\_universo}\}.
+\]
+
+\section{Construção da base processada}
+
+O filtro de origem é deliberado. O objetivo não é reconstruir todo o sistema brasileiro de fundos, mas a
+rede relevante para os fundos presentes no painel CONS+SH do TCC. Assim, \texttt{cnpj\_fundo} precisa estar
+no universo do projeto. Já \texttt{cnpj\_cota} pode estar dentro ou fora desse universo. Quando o destino
+está fora, a aresta ainda é economicamente informativa, mas não permite recuperar gestora, PL e exposição
+final no mesmo painel.
+
+A Tabela~\ref{tab:cdaresumo} resume a massa de dados por ano. O crescimento do número de arestas é
+compatível com a expansão do universo observado e com maior densidade de estruturas fundo-sobre-fundo.
 
 \begin{table}[H]\centering
 \caption{Resumo da CDA processada.}
+\label{tab:cdaresumo}
 \small
 \begin{tabular}{rrrrr}
 \toprule
@@ -539,17 +553,85 @@ fundos observado na SH. A saída é \texttt{data/processed/cda\_edges.csv}, com 
 
 \section{Validação da CDA}
 
-As principais checagens foram:
+As principais checagens foram feitas antes de usar a CDA para qualquer interpretação econômica:
 \begin{itemize}
-\item não há \emph{self-loops}, isto é, fundo investindo diretamente nele mesmo;
-\item não há duplicatas exatas de arestas;
-\item os valores de mercado não têm NAs nem valores negativos;
-\item a fração $\phi = \text{valor}/PL_{\text{destino}}$ tem mediana próxima de 0,007;
-\item 98,6\% das observações com PL válido ficam em $(0,1]$.
+\item \textbf{identidade das arestas}: a aresta é sempre lida como fundo de origem detendo cotas do fundo de
+destino;
+\item \textbf{CNPJ}: origem e destino são normalizados com a mesma função usada no restante do projeto;
+\item \textbf{datas}: a competência é mensal e compatível com os painéis CONS+SH;
+\item \textbf{valores}: \texttt{valor\_brl} está em reais, não em mil reais;
+\item \textbf{self-loops}: não há fundo investindo diretamente nele mesmo;
+\item \textbf{duplicatas}: não há duplicatas exatas de arestas no arquivo processado;
+\item \textbf{valores inválidos}: os valores de mercado não têm NAs nem valores negativos;
+\item \textbf{confidencialidade}: \texttt{DT\_CONFID\_APLIC} preenchido não é tratado automaticamente como
+destino mascarado, porque \texttt{CNPJ\_FUNDO\_COTA} permanece preenchido;
+\item \textbf{fração de propriedade}: quando há PL do destino, calcula-se
+$\phi=\text{valor}/PL_{\text{destino}}$ para avaliar plausibilidade.
 \end{itemize}
 
-Casos com $\phi>1$ são raros e foram capados em 1 no cálculo de de-duplicação. Isso é conservador: impede
-que erro de unidade ou defasagem de PL gere propriedade acima de 100\%.
+A fração $\phi$ tem mediana próxima de 0,007 e a grande maioria das observações com PL válido fica em
+$(0,1]$. Casos com $\phi>1$ são raros e foram capados em 1 no cálculo de de-duplicação. Isso é conservador:
+impede que erro de unidade, defasagem de PL ou diferença de cobertura gere propriedade acima de 100\%.
+
+\section{Visualização dos grafos}
+
+As figuras de rede são geradas por \texttt{R/21\_cda\_graph\_figures.R}. Elas não são desenhos manuais:
+partem de \texttt{data/processed/cda\_edges.csv}. A Figura~\ref{fig:cdafundgraph} mostra o subgrafo
+fundo$\to$fundo mais conectado em dezembro de 2021, filtrado para os 120 nós de maior grau e removendo
+isolados. Nós azuis são fundos no universo CONS+SH; nós cinza são origens ou destinos fora do universo
+principal, mas observados na CDA.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.92\textwidth]{cda_graph_fund_core.png}
+\caption{CDA Bloco 2: subgrafo fundo$\to$fundo mais conectado em dezembro de 2021.}
+\label{fig:cdafundgraph}
+\end{figure}
+
+A Figura~\ref{fig:cdamgrgraph} projeta as arestas para o nível de gestoras: uma aresta gestora A
+$\to$ gestora B aparece quando fundos da gestora A detêm cotas de fundos da gestora B. Essa figura usa
+apenas arestas entre casas diferentes, para evitar que auto-laços dominem visualmente a rede. Ela não é a
+base do forecasting principal; serve para mostrar que há interconexões observáveis entre estruturas de
+fundos.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.92\textwidth]{cda_graph_manager_projection.png}
+\caption{Projeção gestora$\to$gestora das cotas de fundos entre casas em dezembro de 2021.}
+\label{fig:cdamgrgraph}
+\end{figure}
+
+No mês de referência usado nas figuras, a CDA processada contém 5.045 nós e 19.191 arestas antes do filtro
+visual. O subgrafo visualizado tem 96 nós e 258 arestas. A projeção por gestora mostra 45 arestas
+intergestoras entre 38 grupos, após selecionar as maiores relações por valor.
+
+\section{Ciclos e profundidade}
+
+Uma preocupação natural em estruturas FIC/master é a existência de circularidade: fundo A investe em B, B em
+C e C volta a A. Essa situação dificultaria a interpretação de exposição look-through. Para testar isso, o
+projeto constrói, mês a mês, o subgrafo de arestas em que origem e destino estão no universo CONS+SH e usa
+\texttt{igraph::is\_dag}. O resultado é: todos os 72 meses são DAGs. Portanto, não encontramos ciclos
+diretos no subgrafo observado.
+
+Ausência de ciclos não significa ausência de complexidade. O mesmo módulo mede a maior cadeia direcionada em
+cada mês. A profundidade máxima tem mediana 7 e máximo 9 níveis. Isso indica estruturas de aninhamento
+relevantes: a exposição final pode passar por várias camadas de fundos antes de chegar ao ativo consolidado.
+
+\begin{table}[H]\centering
+\caption{Estrutura da rede CDA no universo observado.}
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Métrica} & \textbf{Valor} \\
+\midrule
+Arestas CDA processadas & 835.694 \\
+Meses analisados & 72 \\
+Meses com ciclos & 0 \\
+Profundidade máxima mediana & 7 \\
+Profundidade máxima observada & 9 \\
+Nós no último mês, subgrafo intra-amostra & 2.565 \\
+Arestas no último mês, subgrafo intra-amostra & 5.968 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{De-duplicação intra-gestora}
 
@@ -569,12 +651,33 @@ gestoras no universo observado, a duplicação rastreável aumenta em cerca de 5
 a 43,0\%. Portanto, o número de 37,6\% deve sempre ser lido como duplicação \emph{intra-gestora}, não como
 duplicação total do sistema.
 
-\section{Resultados da rede CDA}
+\begin{figure}[H]\centering
+\includegraphics[width=0.84\textwidth]{itub4_dedup_itau.png}
+\caption{Itaú: exposição bruta e de-duplicada em ITUB4.}
+\label{fig:dedup}
+\end{figure}
 
-No módulo CDA, o grafo observado é acíclico nos 72 meses e tem profundidade relevante: a cadeia máxima tem
-mediana 7 e máximo 9 níveis. A extensão para todas as ações sugere duplicação intra-gestora próxima de 37\%
-também em \emph{blue chips}. Esses achados sustentam a motivação de risco: fundos sobre fundos podem ampliar
-exposição econômica e criar camadas relevantes de interconexão, mesmo sem circularidade.
+\section{Como a CDA se conecta a modelos de grafo}
+
+É tentador dizer que o projeto ``prevê grafos'', mas essa não é a formulação correta no estágio atual. O que
+o projeto prevê é exposição consolidada:
+\[
+\widehat{E}_{g,i,t+h}.
+\]
+O grafo entra como informação auxiliar. Em uma extensão, poderíamos escrever:
+\[
+\widehat{E}_{g,i,t+h}
+= f(E_{g,i,\leq t}, E_{-g,i,\leq t}, G_t),
+\]
+em que $G_t$ é o grafo observado de fundos ou gestoras no mês $t$. Uma GNN usaria a matriz de adjacência
+derivada da CDA e atributos dos nós, como exposição atual, variação passada, PL, centralidade, grau e
+vizinhança. O alvo continuaria sendo exposição futura, não a aresta futura.
+
+O teste já feito com feature manual de rede é uma versão fraca dessa ideia: usa a exposição dos vizinhos no
+grafo como preditor adicional. O resultado não superou o AR de painel. Isso não prova que todo modelo de
+grafo falhará; apenas mostra que uma média simples de vizinhos não captura sinal incremental suficiente. Para
+ser defensável, qualquer GNN futura deve ser comparada contra \emph{random walk}, AR, painel e fatores,
+sempre com origem móvel e sem vazamento.
 
 \section{Limitações da CDA}
 
@@ -588,9 +691,10 @@ rede observável;
 mascarado quando o CNPJ do destino está preenchido.
 \end{enumerate}
 
-Assim, a CDA deve ser tratada como infraestrutura de rede: essencial para estudar fundos sobre fundos, mas
-dependente de filtros, cobertura e validações próprias. O apêndice documenta esses detalhes para que a camada
-de grafo seja auditável.
+Assim, a CDA deve ser tratada como apêndice técnico robusto: útil, auditado e visualmente informativo, mas
+separado do núcleo consolidado. A conclusão principal do TCC não depende dela. A contribuição da CDA é
+mostrar a estrutura de fundos sobre fundos que a CONS apaga, quantificar risco de aninhamento e deixar pronta
+uma trilha metodológica para modelos de grafo.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

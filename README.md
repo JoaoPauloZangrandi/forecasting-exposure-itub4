@@ -2,14 +2,15 @@
 
 Trabalho de Conclusão de Curso (FGV EESP) — orientador Prof. Maurício Ferraresi Jr.
 
-O objetivo central é **medir e prever a exposição das gestoras a ações** no mercado brasileiro, motivado pela
-literatura de *demand-based asset pricing*. O desenho atual é um sistema de forecasting por gestora e ação:
-para cada ação, mês a mês, medir quem aumentou ou reduziu exposição e testar se o histórico da gestora, o
-restante do mercado e a rede de fundos interconectados ajudam a prever a exposição futura.
+O objetivo central é **medir e prever a exposição consolidada das gestoras a ações** no mercado brasileiro,
+motivado pela literatura de *demand-based asset pricing*. O desenho atual é um sistema de forecasting por
+gestora e ação: para cada ação, mês a mês, medir quem aumentou ou reduziu exposição e testar se o histórico
+da gestora e o restante do mercado ajudam a prever a exposição futura.
 
 A medida principal é **exposição em valor** (R$ e US$), por ser mais didática e diretamente ligada a risco
-patrimonial. A quantidade estimada de ações entra como robustez para ITUB4. A CDA Bloco 2 é usada para
-reconstruir relações fundo→fundo e formar a camada de rede do sistema preditivo.
+patrimonial. A quantidade estimada de ações entra como robustez para ITUB4. A CDA Bloco 2 é mantida como
+apêndice técnico/extensão: reconstrói relações fundo→fundo apagadas pela CONS, fundamenta visualmente a ideia
+de redes e prepara uma eventual comparação com modelos de grafo.
 
 **Período:** 2016–2021 (carteiras mensais).
 
@@ -40,8 +41,10 @@ R/                 pipeline modular em R
   18_data_review.R         revisão profunda das bases e auditorias
   19_half_life.R           meia-vida de reversão à alocação-alvo
   20_forecast_quantity.R   forecasting usando quantidade estimada de ITUB4
+  21_cda_graph_figures.R   figuras de grafo CDA e diagrama do desenho empírico
   forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
 docs/              tcc.tex/pdf (TCC único), refs.bib e guia_tecnico_projeto.md
+Comprehend.md      documentação longa: teoria, bases, scripts, resultados, CDA e GNN
 notebooks/         exploração
 outputs/figures/   gráficos (.png)
 outputs/tables/    tabelas de auditoria (.csv)
@@ -82,9 +85,12 @@ consolidada** da CVM, Bloco BLC_2 de "Cotas de Fundos".
 A CDA Bloco 2 (2016–2021) já foi baixada e as arestas fundo→fundo extraídas
 (`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora do git). Ela serve para: (i) testar se há
 circularidade nas estruturas FIC/master; (ii) medir profundidade de aninhamento; (iii) estimar dupla contagem
-intra-gestora; e (iv) criar features de rede para forecasting. No arquivo histórico processado, o campo
-`DT_CONFID_APLIC` aparece preenchido em parte das arestas, mas `CNPJ_FUNDO_COTA` está disponível; portanto,
-não tratar essas linhas automaticamente como destino mascarado.
+intra-gestora; (iv) gerar figuras reais de grafos; e (v) criar uma extensão possível com features de rede.
+Ela **não** substitui a CONS e **não** muda o alvo principal: o forecasting é da exposição consolidada, não
+da topologia futura do grafo.
+
+No arquivo histórico processado, o campo `DT_CONFID_APLIC` aparece preenchido em parte das arestas, mas
+`CNPJ_FUNDO_COTA` está disponível; portanto, não tratar essas linhas automaticamente como destino mascarado.
 
 ## Como rodar
 
@@ -127,6 +133,7 @@ Camada de rede/CDA:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/_prep_fund_extracts.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/10_build_cda_edges.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/11_fund_graph.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/21_cda_graph_figures.R
 ```
 
 Compilar o documento (MiKTeX **sem Perl** → usar `pdflatex`+`bibtex`, não `latexmk`):
@@ -136,14 +143,16 @@ Set-Location docs
 pdflatex -interaction=nonstopmode tcc.tex; bibtex tcc; pdflatex -interaction=nonstopmode tcc.tex; pdflatex -interaction=nonstopmode tcc.tex
 ```
 
-Para entender o projeto em nível operacional, use `docs/guia_tecnico_projeto.md`.
+Para entender o projeto em nível operacional, use `docs/guia_tecnico_projeto.md`. Para uma documentação
+mais granular, use `Comprehend.md`.
 
 ## Status
 
-Fase atual: pipeline de exposição validado para ITUB4, extensão para todas as ações, revisão profunda das
-bases CONS+SH+CDA, rodadas de forecasting e primeira feature de rede executadas.
+Fase atual: pipeline de exposição consolidada validado para ITUB4, extensão para todas as ações, revisão
+profunda das bases CONS+SH, apêndice CDA/rede documentado, rodadas de forecasting e primeira feature de rede
+executadas.
 
-Resultado central: o projeto deve ser motivado como forecasting de demanda/exposição. A variação mensal é
-difícil de bater contra random walk; o nível em valor tem alguma reversão à média; e a rede CDA é a
-infraestrutura para avançar para modelos de grafo. A primeira feature manual de vizinhos não melhora o AR de
-painel, então ela funciona como baseline, não como conclusão contra GNN.
+Resultado central: o projeto deve ser motivado como forecasting consolidado de demanda/exposição. A variação
+mensal é difícil de bater contra random walk; o nível em valor tem alguma reversão à média; a quantidade de
+ITUB4 mostra que parte da reversão em valor vem de preço/marcação; e a CDA entra como apêndice técnico para
+redes, risco estrutural e eventual GNN.

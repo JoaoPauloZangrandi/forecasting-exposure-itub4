@@ -6,19 +6,19 @@ resultados, limites e caminhos futuros.
 
 ## 1. Ideia em linguagem simples
 
-O projeto mede e tenta prever a exposição das gestoras brasileiras a ações. O rumo correto, pela orientação
-mais recente do orientador, e motivar o TCC como um exercício de forecasting de demanda/exposição usando
-redes. Para cada ação e mes, queremos entender quais gestoras aumentaram ou reduziram exposição e se isso
-pode ser previsto usando: histórico da própria gestora, comportamento do restante do mercado e rede de fundos
-interconectados.
+O projeto mede e tenta prever a exposição consolidada das gestoras brasileiras a ações. O rumo correto, pela
+orientação mais recente do orientador, e motivar o TCC como um exercício de forecasting de demanda/exposição:
+para cada ação e mes, queremos entender quais gestoras aumentaram ou reduziram exposição e se isso pode ser
+previsto usando o histórico da própria gestora e o comportamento do restante do mercado.
 
 A resposta empirica e:
 
 - A medida principal deve ser exposição em valor, em R$ e US$, porque e mais didatica e ligada a risco.
 - Quantidade estimada de ações fica como robustez para ITUB4, nao como eixo central.
-- A CDA Bloco 2 e a forma operacional de reconstruir a rede fundo->fundo que a CONS apaga.
-- A primeira feature manual de rede nao melhorou o AR de painel; isso vira baseline para um modelo de grafo
-  mais rico, nao argumento para abandonar rede.
+- A CDA Bloco 2 fica como apendice tecnico robusto: ela reconstrói a rede fundo->fundo que a CONS apaga,
+  gera figuras de grafos e prepara uma extensao possivel com modelos de rede.
+- A primeira feature manual de rede nao melhorou o AR de painel; isso vira baseline para qualquer extensao
+  com grafo, nao resultado central do TCC.
 
 ## 2. Estrutura atual da pasta `docs`
 
@@ -31,6 +31,9 @@ A pasta `docs` deve ter apenas:
 
 Arquivos antigos como `tcc_final`, `tcc_todas_acoes` e `tcc_forecasting` eram versões intermediarias e nao
 devem permanecer como TCCs separados.
+
+Fora da pasta `docs`, o arquivo `Comprehend.md` e a documentacao longa: teoria, bases, scripts, resultados,
+CDA, grafos e extensao com GNN.
 
 ## 3. Fundamentação teorica
 
@@ -75,9 +78,10 @@ treino para evitar vazamento.
 Sanchez-Lengeling et al. entram como referencia introdutoria para redes neurais em grafo. GNNs sao modelos
 que aprendem representações de nos usando atributos dos nos e conexões do grafo.
 
-No projeto, GNN e o caminho metodologico natural caso se avance na camada de rede. Antes de implementar uma
-GNN pesada, testamos uma feature simples de vizinhos. Ela nao melhorou a previsão, mas isso deve ser lido
-como baseline: uma media manual de vizinhos e fraca; uma GNN poderia aprender pesos e interações mais ricas.
+No projeto, GNN e uma extensao metodologica possivel, nao o nucleo atual. Antes de implementar uma GNN
+pesada, testamos uma feature simples de vizinhos. Ela nao melhorou a previsão, mas isso deve ser lido como
+baseline: uma media manual de vizinhos e fraca; uma GNN poderia aprender pesos e interações mais ricas. O
+alvo seguiria sendo exposição consolidada futura, nao a topologia futura do grafo.
 
 ## 4. Bases de dados
 
@@ -131,8 +135,9 @@ Colunas usadas:
 - `VL_MERC_POS_FINAL`: valor de mercado da posição;
 - `DT_CONFID_APLIC`: campo associado a confidencialidade.
 
-A CDA nao substitui a CONS. A CONS mede a exposição final a ações; a CDA mede o caminho fundo->fundo. Para a
-ideia de forecasting via network graph, a CDA e a infraestrutura da rede.
+A CDA nao substitui a CONS. A CONS mede a exposição final a ações; a CDA mede o caminho fundo->fundo. No
+TCC atual, ela deve aparecer no apendice como auditoria de rede, risco estrutural, visualização de grafos e
+base para uma possivel extensao com GNN.
 
 ### 4.4 B3/COTAHIST
 
@@ -389,20 +394,20 @@ Resultado complementar:
 
 ## 8. Como interpretar a CDA corretamente
 
-A CDA deve ser interpretada como infraestrutura de rede:
+A CDA deve ser interpretada como apendice tecnico de rede:
 
 - CONS mede exposição final em ações;
 - CDA mede o caminho fundo->fundo;
 - o Bloco 2 e exatamente cotas de fundos;
 - a auditoria mostra valores plausiveis;
 - o resultado de dupla contagem e economicamente relevante;
-- a rede CDA e o caminho natural para forecasting via graphs network.
+- a rede CDA e uma extensao natural para forecasting via graph network, mas nao muda o alvo principal.
 
 Formula segura:
 
-> A CDA Bloco 2 e a base usada para reconstruir a rede fundo-sobre-fundo apagada pela CONS consolidada. Ela
-> permite medir aninhamento, testar circularidade, estimar duplicação e criar features de rede para
-> forecasting.
+> A CDA Bloco 2 e a base usada, em apendice, para reconstruir a rede fundo-sobre-fundo apagada pela CONS
+> consolidada. Ela permite medir aninhamento, testar circularidade, estimar duplicação, criar figuras de
+> grafos e preparar features de rede para uma extensao de forecasting.
 
 Formula a evitar:
 
@@ -451,11 +456,11 @@ modelo de grafo pode aprender pesos, direções e não linearidades que a media 
 
 ### 9.4 Quando uma GNN faria sentido
 
-Faz sentido porque:
+Faz sentido como extensao porque:
 
 - o orientador explicitou a ideia de previsão por graphs network;
 - a CDA ja fornece as arestas fundo->fundo;
-- o painel gestora x ação x mes ja fornece os alvos de exposição;
+- o painel gestora x ação x mes ja fornece os alvos de exposição consolidada;
 - a comparação contra random walk, AR e fatores ja existe.
 
 ### 9.5 Riscos de GNN
@@ -471,12 +476,12 @@ Faz sentido porque:
 
 Defesa conservadora:
 
-1. O nucleo do TCC e forecasting de demanda/exposição, alinhado a demand-based asset pricing.
+1. O nucleo do TCC e forecasting consolidado de demanda/exposição, alinhado a demand-based asset pricing.
 2. CONS e SH medem exposição em valor por gestora, ação e mes.
-3. CDA reconstrói a rede fundo->fundo necessaria para o componente de graph network.
+3. CDA reconstrói, em apendice, a rede fundo->fundo apagada pela CONS.
 4. O tratamento de dados foi auditado: formatos, duplicatas, joins, PL, tickers, preços e arestas.
 5. A pergunta de previsão foi testada com benchmark forte e sem vazamento.
-6. A primeira feature de rede nao melhora, mas vira baseline para um modelo de grafo mais rico.
+6. A primeira feature de rede nao melhora, mas vira baseline para uma extensao com modelo de grafo.
 
 ## 11. Figuras e tabelas para apresentar ao orientador
 
@@ -486,17 +491,19 @@ Ordem sugerida para a reunião:
 2. Tabela `exposure_definitions_comparison.csv`: mostra exposição em R$ e US$ para ITUB4 nas definições direta, long e net.
 3. `pos_usd_top_gestoras.png`: mostra a série de exposição em valor por gestora.
 4. Tabela `cda_edges_summary.csv`: mostra que a CDA tem massa suficiente para reconstruir rede fundo->fundo.
-5. Tabela `graph_structural_by_month.csv`: destacar 0 meses com ciclos, profundidade mediana 7 e max 9.
-6. `itub4_dedup_itau.png` e `itub4_dedup_summary.csv`: mostrar duplicação intra-gestora.
-7. `forecast_round3_skill.png`: mostrar que nivel em valor tem alguma previsibilidade.
-8. `forecast_round4_metrics.csv`: mostrar que feature manual de rede ainda nao melhora, motivando GNN/modelo de grafo melhor.
-9. `forecast_quantity_delta_skill.png`: se perguntarem sobre quantidade, mostrar como robustez.
+5. `research_design_graph.png`: mostrar que o nucleo e forecast consolidado e a CDA fica no apendice.
+6. `cda_graph_fund_core.png` e `cda_graph_manager_projection.png`: mostrar visualmente a rede CDA.
+7. Tabela `graph_structural_by_month.csv`: destacar 0 meses com ciclos, profundidade mediana 7 e max 9.
+8. `itub4_dedup_itau.png` e `itub4_dedup_summary.csv`: mostrar duplicação intra-gestora.
+9. `forecast_round3_skill.png`: mostrar que nivel em valor tem alguma previsibilidade.
+10. `forecast_round4_metrics.csv`: mostrar que feature manual de rede ainda nao melhora, funcionando como baseline de extensao.
+11. `forecast_quantity_delta_skill.png`: se perguntarem sobre quantidade, mostrar como robustez.
 
 Mensagem de apresentação:
 
-> O TCC mede exposição institucional em ações e tenta prever essa exposição. A parte nova e que a rede
-> fundo-sobre-fundo, reconstruida pela CDA, pode ser usada como camada de informação para o forecasting e
-> tambem para entender risco de duplicação/aninhamento em gestoras.
+> O TCC mede exposição institucional consolidada em ações e tenta prever essa exposição por gestora e ação.
+> A CDA fica no apendice: ela mostra a rede fundo-sobre-fundo que a CONS apaga, ajuda a entender risco de
+> duplicação/aninhamento e deixa preparada uma extensao com modelos de grafo.
 
 ## 12. Checklist de reproducibilidade
 
@@ -520,6 +527,7 @@ Camada CDA/rede:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/10_build_cda_edges.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/11_fund_graph.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/16_forecast_round4.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/21_cda_graph_figures.R
 ```
 
 Compilar TCC:
@@ -543,7 +551,7 @@ pdflatex -interaction=nonstopmode tcc.tex
 
 O resultado mais defensavel e:
 
-> Com CONS e SH, construimos um painel confiavel da exposição das gestoras a ações. A variação mensal da
-> exposição e dificil de prever com modelos simples, mas a rede fundo-sobre-fundo reconstruida pela CDA
-> oferece uma camada natural para forecasting por graph network. O projeto mede exposição em R$ e US$, testa
-> baselines e prepara a comparação com modelos de rede para entender consequências de risco nas gestoras.
+> Com CONS e SH, construimos um painel confiavel da exposição consolidada das gestoras a ações. A variação
+> mensal da exposição e dificil de prever com modelos simples; o nivel em valor tem alguma reversão a media.
+> A CDA, documentada em apendice, reconstrói a rede fundo-sobre-fundo que a CONS apaga e prepara uma extensão
+> com modelos de grafo para estudar risco e possíveis ganhos preditivos.
