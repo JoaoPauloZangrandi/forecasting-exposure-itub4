@@ -84,10 +84,14 @@ A CONS é **100% "Ações"**: as relações fundo→fundo foram apagadas pela co
 análise explícita de grafo fundo-sobre-fundo precisa de uma base adicional. A opção usada aqui é a **CDA não
 consolidada** da CVM, Bloco BLC_2 de "Cotas de Fundos".
 
-A CDA Bloco 2 (2016–2021) já foi baixada e as arestas fundo→fundo extraídas
-(`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora do git). Ela serve para: (i) testar se há
-circularidade nas estruturas FIC/master; (ii) medir profundidade de aninhamento; (iii) estimar dupla contagem
-intra-gestora; (iv) gerar figuras reais de grafos; e (v) criar uma extensão possível com features de rede.
+A CDA Bloco 2 (2016–2021) já foi baixada e as arestas fundo→fundo extraídas. O CSV completo fica
+versionado de forma compactada em `data/processed/cda_edges.csv.zip`; ao descompactar, ele recria
+`data/processed/cda_edges.csv`. O CSV aberto permanece no `.gitignore` apenas para evitar duplicar no
+histórico um arquivo grande e regenerável. A mesma base pode ser reconstruída por `R/10_build_cda_edges.R`.
+
+Ela serve para: (i) testar se há circularidade nas estruturas FIC/master; (ii) medir profundidade de
+aninhamento; (iii) estimar dupla contagem intra-gestora; (iv) gerar figuras reais de grafos; e (v) criar uma
+extensão possível com features de rede.
 Ela **não** substitui a CONS e **não** muda o alvo principal: o forecasting é da exposição consolidada, não
 da topologia futura do grafo.
 
@@ -134,11 +138,15 @@ Extensão para todas as ações e forecast:
 Camada de rede/CDA:
 
 ```powershell
+Expand-Archive -LiteralPath data\processed\cda_edges.csv.zip -DestinationPath data\processed -Force
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/_prep_fund_extracts.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/10_build_cda_edges.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/11_fund_graph.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/21_cda_graph_figures.R
 ```
+
+Se `cda_edges.csv` já tiver sido descompactado, o comando `Expand-Archive` é opcional. Se quiser reconstruir
+do zero a partir da CVM, rode `R/10_build_cda_edges.R`.
 
 Compilar o documento (MiKTeX **sem Perl** → usar `pdflatex`+`bibtex`, não `latexmk`):
 
