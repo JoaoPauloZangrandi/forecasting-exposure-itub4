@@ -4,6 +4,9 @@ Este arquivo e o mapa completo do projeto. A ideia e permitir que alguem abra o 
 entenda a pergunta de pesquisa, as bases, o pipeline, as escolhas metodologicas, os resultados e os pontos
 que ainda precisam de cuidado em uma defesa academica.
 
+Versao em PDF: `docs/Comprehend.pdf`. O PDF e um manual narrativo mais facil de ler de ponta a ponta; este
+Markdown continua sendo a referencia operacional para navegar no repositorio.
+
 ## 1. Tese central do projeto
 
 O TCC deve ser motivado como um exercicio de **forecasting consolidado de demanda/exposicao institucional
@@ -702,4 +705,191 @@ constroem o painel principal. A previsao mensal da variacao e dificil; o nivel e
 media em ITUB4 e em algumas blue chips, mas o forecast consolidado com todas as acoes elegiveis, n-1 e fator
 comum nao bate o random walk no agregado. A CDA entra em apendice para documentar a rede fundo-sobre-fundo
 que a CONS apaga, avaliar risco de aninhamento/duplicacao e preparar uma extensao com modelos de grafo.
+```
+
+## 18. Explicacao completa do projeto, do jeito que eu explicaria para uma banca
+
+### 18.1 O projeto em uma frase
+
+O projeto constroi uma base mensal de exposicao consolidada de gestoras brasileiras a acoes e testa, com
+avaliacao fora da amostra, se essa exposicao futura pode ser prevista pelo historico da propria gestora, pelo
+restante do mercado e, em extensao, por informacao de rede.
+
+Isso parece simples, mas tem tres camadas:
+
+1. **Medicao**: transformar CONS+SH em painel gestora x acao x mes.
+2. **Interpretacao economica**: ler carteiras observadas como demanda/exposicao institucional.
+3. **Forecasting**: testar se a exposicao futura e previsivel de forma robusta.
+
+### 18.2 O que nao estamos fazendo
+
+Nao estamos tentando prever o grafo. A frase "prever grafos" e tentadora, mas tecnicamente errada para a
+versao atual. O grafo CDA pode ser uma camada de informacao; o alvo continua sendo:
+
+```text
+E[g, i, t+h]
+```
+
+onde `g` e gestora, `i` e acao e `t+h` e o mes futuro.
+
+Tambem nao estamos dizendo que a CDA e mais correta que a CONS. A CONS e a base principal para exposicao
+final em acoes. A CDA e o apendice tecnico que mostra o caminho fundo->fundo apagado pela consolidacao.
+
+### 18.3 Por que a literatura permite chamar isso de demanda
+
+Demand-based asset pricing parte da ideia de que carteiras observadas revelam demanda dos investidores. No
+nosso caso, uma posicao maior de uma gestora em ITUB4 nao e "demanda" no sentido de ordem de compra no book;
+e uma exposicao observada que pode ser interpretada como resultado da demanda institucional daquela gestora.
+
+A ponte conceitual e:
+
+```text
+carteira observada -> exposicao institucional -> demanda revelada
+```
+
+Essa ponte precisa ser usada com cuidado. Se o valor em reais sobe, pode ser porque a gestora comprou acoes
+ou porque o preco subiu. Por isso criamos a robustez em quantidade estimada para ITUB4.
+
+### 18.4 Por que o random walk e tao forte
+
+Em carteira, a posicao de hoje costuma ser uma boa previsao da posicao de amanha ou do mes seguinte. Se a
+gestora tinha US$ 100 milhoes em uma acao em maio, uma previsao burra mas forte para junho e US$ 100 milhoes.
+
+Por isso o benchmark central e:
+
+```text
+y_hat[t+1] = y[t]
+```
+
+Para variacao, isso equivale a:
+
+```text
+Delta_hat[t+1] = 0
+```
+
+Um modelo so e interessante se bater esse benchmark fora da amostra. Bater regressao dentro da amostra nao
+vale muito, porque pode ser overfit.
+
+### 18.5 RMSE, MAE e skill
+
+RMSE e a raiz do erro quadratico medio:
+
+```text
+RMSE = sqrt(mean((y - y_hat)^2))
+```
+
+Ele pune muito erros grandes. Isso faz sentido para risco patrimonial: errar muito em uma grande gestora ou
+em uma grande acao e economicamente relevante.
+
+MAE e o erro absoluto medio:
+
+```text
+MAE = mean(abs(y - y_hat))
+```
+
+Ele e mais robusto a outliers. Se um modelo melhora RMSE mas piora MAE, ele provavelmente reduziu alguns
+erros grandes, mas piorou a previsao tipica.
+
+Skill contra random walk e:
+
+```text
+skill = 100 * (1 - RMSE_modelo / RMSE_RW)
+```
+
+Skill positivo significa que o modelo bateu o random walk. Skill negativo significa que perdeu.
+
+### 18.6 AR e reversao a media
+
+O AR(1) basico e:
+
+```text
+y[t+1] = alpha + rho * y[t] + erro
+```
+
+No projeto, a leitura economica mais util e reversao a media:
+
+```text
+y[t+1] - media = rho * (y[t] - media) + erro
+```
+
+Se `rho < 1`, desvios em relacao a uma exposicao-alvo tendem a fechar. A meia-vida traduz isso em meses:
+
+```text
+half_life = log(0.5) / log(rho)
+```
+
+Para ITUB4 em valor, a meia-vida mediana ficou perto de 2,8 meses. Isso e uma historia intuitiva: algumas
+gestoras parecem ter uma faixa-alvo de exposicao patrimonial e voltam para ela relativamente rapido.
+
+### 18.7 PCA e fator comum
+
+PCA testa se existe um componente comum de exposicao entre gestoras. Se varias gestoras se movem juntas, um
+fator comum poderia ajudar a prever. A regra metodologica importante e que o PCA precisa ser estimado so com
+dados de treino em cada origem. Se usar a amostra toda, vaza futuro.
+
+Nos resultados, PCA/fator comum nao melhorou o forecast agregado. Isso e informativo: a comovimentacao
+observada nao virou ganho fora da amostra contra o random walk.
+
+### 18.8 n-1, o restante do mercado
+
+O `n-1` e a forma operacional de implementar a ideia do Mauricio. Para uma gestora `g` e uma acao `i`,
+calculamos a exposicao media das outras gestoras naquela mesma acao:
+
+```text
+n1[g,i,t] = media(E[h,i,t] para h != g)
+```
+
+Se o comportamento das outras gestoras ajudasse a prever `g`, esse coeficiente deveria aparecer positivo e
+relevante. No forecast consolidado final, o coeficiente mediano do `n-1` foi 0,0054, praticamente zero.
+
+### 18.9 Resultados de forecasting em ordem logica
+
+1. **Delta mensal de ITUB4 em valor**: random walk vence. AR, media e PCA nao ajudam.
+2. **Regularizacao**: AR encolhido melhora 1,0% em RMSE, mas piora MAE; direcao fica perto de 50%.
+3. **Nivel de ITUB4 em valor**: aparece sinal. AR individual ganha cerca de 10% contra random walk.
+4. **Half-life**: reversao em valor tem meia-vida mediana perto de 2,8 meses.
+5. **Feature de rede CDA**: vizinhos no grafo nao melhoram o AR de painel.
+6. **Todas as acoes**: ITUB4 e um caso favoravel; a acao tipica nao bate random walk.
+7. **Quantidade estimada**: sinal de demanda em quantidade e mais fraco do que sinal em valor.
+8. **Painel consolidado final**: com 183.924 previsoes OOS por modelo, AR, n-1 e fator comum nao batem o
+   random walk no agregado.
+
+### 18.10 O que isso quer dizer economicamente
+
+O resultado nao e "nao deu certo". O resultado e: exposicao institucional e mensuravel, concentrada e
+economicamente relevante, mas a previsibilidade mensal agregada e limitada. Isso conversa bem com a ideia de
+mercados e carteiras persistentes: posicoes mudam, mas o melhor preditor de curto prazo muitas vezes ainda e
+a propria posicao atual.
+
+O ponto positivo especifico e ITUB4: uma blue chip muito detida, com alocacoes mais estaveis, onde reversao a
+media aparece. O ponto negativo robusto e o painel amplo: quando colocamos todas as acoes elegiveis, o ganho
+some.
+
+### 18.11 Onde estamos agora
+
+Estamos com uma versao defendivel do TCC:
+
+- documento unico em `docs/tcc.pdf`;
+- manual em `docs/Comprehend.pdf`;
+- apendice CDA detalhado;
+- auditoria mestre PASS 41 / FAIL 0;
+- forecast consolidado final rodado;
+- resultados honestos e alinhados com a literatura.
+
+### 18.12 Para onde ir se quisermos deixar com cara de SSRN
+
+O proximo passo nao e sair colocando modelo complexo. O proximo passo e empacotar melhor a contribuicao:
+
+1. Transformar a narrativa em formato paper.
+2. Dar mais destaque para a construcao da base e para a validacao.
+3. Explicar a evidencia negativa como resultado, nao como fracasso.
+4. Confirmar a referencia exata do paper do Mauricio.
+5. Se rodar GNN, fazer como extensao e comparar contra todos os baselines atuais.
+6. Considerar uma versao em ingles.
+
+Uma possivel tese de paper seria:
+
+```text
+Brazilian mutual fund holdings reveal strong institutional concentration in blue chips, but monthly
+manager-level equity exposure is hard to forecast out of sample once benchmarked against random walk.
 ```

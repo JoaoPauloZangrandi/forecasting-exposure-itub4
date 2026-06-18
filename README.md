@@ -45,7 +45,7 @@ R/                 pipeline modular em R
   22_master_validation.R    auditoria mestre PASS/WARN/FAIL
   23_forecast_consolidated_panel.R  forecast consolidado gestora×ação×mês com n-1 e fator comum
   forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
-docs/              tcc.tex/pdf (TCC único), refs.bib e guia_tecnico_projeto.md
+docs/              tcc.tex/pdf (TCC único), Comprehend.tex/pdf, refs.bib e guia_tecnico_projeto.md
 Comprehend.md      documentação longa: teoria, bases, scripts, resultados, CDA e GNN
 notebooks/         exploração
 outputs/figures/   gráficos (.png)
@@ -148,7 +148,7 @@ pdflatex -interaction=nonstopmode tcc.tex; bibtex tcc; pdflatex -interaction=non
 ```
 
 Para entender o projeto em nível operacional, use `docs/guia_tecnico_projeto.md`. Para uma documentação
-mais granular, use `Comprehend.md`.
+mais granular, use `Comprehend.md` ou a versão diagramada `docs/Comprehend.pdf`.
 
 ## Status
 
