@@ -1,6 +1,6 @@
 # =============================================================================
-# 07_correlation.R — matrizes de correlação entre gestoras (variação mensal da
-# posição em US$) + figuras. O orientador pediu explicitamente estas matrizes.
+# 07_correlation.R — matrizes de correlação entre gestoras (variação mensal em
+# US$ e em quantidade estimada de ações) + figuras.
 # =============================================================================
 suppressPackageStartupMessages({ library(data.table); library(ggplot2) })
 
@@ -45,5 +45,49 @@ plot_positions <- function(panel, sfx = "", top_n = 8L) {
          x = NULL, y = "US$ milhoes", color = "Gestora") +
     theme_minimal(base_size = 10) + theme(legend.position = "bottom")
   ggsave(file.path(OUT_FIG, sprintf("pos_usd_top_gestoras%s.png", sfx)), p, width = 10, height = 6, dpi = 150)
+  invisible(top)
+}
+
+build_quantity_correlations <- function(panel, sfx = "") {
+  lbl <- if (sfx == "") "net" else sub("^_", "", sfx)
+  validas <- panel[is.finite(delta_qtd_itub4),
+                   .(n = .N, s = sd(delta_qtd_itub4, na.rm = TRUE)),
+                   by = gestora][n >= 2 & is.finite(s) & s > 0]
+  if (nrow(validas) < 2L) { warning("Poucas gestoras para correlacao em quantidade."); return(invisible(NULL)) }
+
+  sub <- panel[gestora %in% validas$gestora & is.finite(delta_qtd_itub4),
+               .(data, gestora, delta_qtd_itub4)]
+  w <- dcast(sub, data ~ gestora, value.var = "delta_qtd_itub4")
+  m <- as.matrix(w[, -1, with = FALSE]); rownames(m) <- as.character(w$data)
+
+  cor_pw <- cor(m, use = "pairwise.complete.obs")
+  n_pw   <- crossprod(!is.na(m))
+  write_matrix(cor_pw, sprintf("cor_gestoras_delta_qtd_pairwise%s.csv", sfx))
+  write_matrix(n_pw,   sprintf("cor_gestoras_delta_qtd_n%s.csv", sfx))
+
+  cor_dt <- as.data.table(as.table(cor_pw)); setnames(cor_dt, c("g1", "g2", "corr"))
+  p <- ggplot(cor_dt, aes(g1, g2, fill = corr)) +
+    geom_tile(color = "white", linewidth = 0.2) + coord_equal() +
+    scale_fill_gradient2(low = "#b2182b", mid = "white", high = "#2166ac",
+                         midpoint = 0, limits = c(-1, 1), na.value = "grey90") +
+    labs(title = sprintf("Correlacao entre gestoras: variacao mensal da quantidade de ITUB4 (%s)", lbl),
+         x = NULL, y = NULL, fill = "corr") +
+    theme_minimal(base_size = 8) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  ggsave(file.path(OUT_FIG, sprintf("correlation_heatmap_delta_qtd%s.png", sfx)),
+         p, width = 9, height = 8, dpi = 150)
+  invisible(cor_pw)
+}
+
+plot_quantities <- function(panel, sfx = "", top_n = 8L) {
+  lbl <- if (sfx == "") "net" else sub("^_", "", sfx)
+  top <- panel[, .(m = mean(qtd_itub4, na.rm = TRUE)), by = gestora][order(-m)][seq_len(min(top_n, .N)), gestora]
+  p <- ggplot(panel[gestora %in% top], aes(data, qtd_itub4 / 1e6, color = gestora)) +
+    geom_line(linewidth = 0.7, na.rm = TRUE) +
+    labs(title = sprintf("Quantidade estimada de ITUB4 por gestora (milhoes de acoes, %s)", lbl),
+         x = NULL, y = "Milhoes de acoes", color = "Gestora") +
+    theme_minimal(base_size = 10) + theme(legend.position = "bottom")
+  ggsave(file.path(OUT_FIG, sprintf("qtd_itub4_top_gestoras%s.png", sfx)),
+         p, width = 10, height = 6, dpi = 150)
   invisible(top)
 }

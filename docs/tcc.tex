@@ -22,7 +22,7 @@
 \vspace*{1cm}
 {\scshape\large Fundação Getulio Vargas \\ Escola de Economia de São Paulo (EESP)\par}
 \vspace{2.5cm}
-{\huge\bfseries Forecasting da exposição de gestoras de ações\par}
+{\huge\bfseries Forecasting da exposição e da demanda de gestoras por ações\par}
 \vspace{0.8cm}
 {\Large Evidência do mercado brasileiro de fundos, 2016--2021\par}
 \vspace{3cm}
@@ -36,22 +36,22 @@
 \chapter*{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
 Este trabalho mede a exposição das gestoras brasileiras a ações e testa sua previsibilidade sob a ótica do
-\emph{demand-based asset pricing}. O núcleo empírico usa duas bases públicas da CVM, a composição
-consolidada de carteiras (CONS) e a série histórica dos fundos (SH), para construir um painel mensal de
-exposição em valor (R\$ e US\$), consolidado por grupo econômico de gestora, com validação inicial em ITUB4
-e extensão para todas as ações identificáveis no período 2016--2021. A exposição primária é a definição
-\emph{net}, que soma posição direta, ações cedidas em empréstimo e obrigações por ações recebidas em
-empréstimo.
+\emph{demand-based asset pricing}. O núcleo empírico usa bases públicas da CVM, a composição consolidada de
+carteiras (CONS) e a série histórica dos fundos (SH), para construir um painel mensal gestora $\times$ mês,
+consolidado por grupo econômico, com validação inicial em ITUB4 e extensão para todas as ações identificáveis
+no período 2016--2021. A exposição em valor (R\$ e US\$) mede escala patrimonial e risco. Para aproximar
+demanda, este trabalho constrói também uma medida de quantidade estimada de ações, dividindo o valor de ITUB4
+pelo fechamento mensal oficial da B3/COTAHIST.
 
-Os resultados mostram que a variação mensal da exposição é difícil de prever: modelos AR, média histórica e
-fatores de PCA não superam de forma robusta o \emph{random walk}. A previsibilidade aparece no nível da
-posição em US\$, por reversão a uma alocação-alvo, especialmente em ações muito detidas pelas gestoras
-(\emph{blue chips}). Em ITUB4, o AR reduz o RMSE em aproximadamente 10\% em relação ao \emph{random walk}; a
-meia-vida estimada da reversão à média é de cerca de 2,6--2,8 meses. Para a ação típica, entretanto, o
-\emph{random walk} continua difícil de superar. Como apêndice metodológico, o trabalho documenta uma extensão
-com a CDA Bloco~2, que reconstrói relações fundo$\to$fundo e estima dupla contagem intra-gestora em
-estruturas FIC/master. Essa extensão é útil para discutir risco de estruturas fundo-sobre-fundo, mas fica
-separada do núcleo CONS+SH até validação explícita com o orientador.
+Os resultados mostram que a distinção entre valor e quantidade é substantiva. Em valor, o nível da posição em
+ITUB4 apresenta reversão à média e o AR reduz o RMSE em aproximadamente 10\% em relação ao \emph{random
+walk}. Em quantidade estimada de ações, entretanto, a previsibilidade é bem menor: a variação mensal continua
+próxima de um \emph{random walk} e o ganho no nível aparece apenas no horizonte de um mês, com cerca de 3,5\%
+de redução de RMSE. Assim, parte da previsibilidade em valor parece refletir marcação a mercado e reversão
+patrimonial, não necessariamente compras e vendas previsíveis de ações. Como apêndice metodológico, o
+trabalho documenta uma extensão com a CDA Bloco~2, que reconstrói relações fundo$\to$fundo e estima dupla
+contagem intra-gestora em estruturas FIC/master. Essa extensão é útil para discutir risco estrutural, mas fica
+separada do núcleo CONS+SH+B3 até validação explícita com o orientador.
 
 \noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de investimento; exposição em ações;
 forecasting; reversão à média; CVM.
@@ -61,23 +61,28 @@ forecasting; reversão à média; CVM.
 \chapter{Introdução}
 
 O objetivo deste trabalho é medir e prever a exposição das gestoras brasileiras a ações. A pergunta empírica
-nasce de uma ideia simples: se investidores institucionais têm demandas persistentes por ativos, então a
-exposição observada nas carteiras pode conter informação sobre comportamento futuro de demanda. A literatura
-de \emph{demand-based asset pricing} fornece a motivação: preços não são determinados apenas por fundamentos
+nasce de uma ideia simples: se investidores institucionais têm demandas persistentes por ativos, então as
+carteiras observadas podem conter informação sobre comportamento futuro. A literatura de
+\emph{demand-based asset pricing} fornece a motivação: preços não são determinados apenas por fundamentos
 agregados, mas também pela demanda de investidores com restrições, preferências e mandatos específicos
 \citep{koijenyogo2019,gabaixkoijen2021}.
 
 O caso brasileiro é adequado para esse exercício porque a CVM disponibiliza bases públicas de fundos. A CONS
 permite observar a composição consolidada das carteiras e a SH permite associar cada fundo à sua gestora e
-ao seu patrimônio líquido. Com essas bases, construímos um painel gestora $\times$ mês $\times$ ação em
-valor, primeiro para ITUB4, depois para todas as ações reconhecíveis no período 2016--2021.
+ao seu patrimônio líquido. Essas duas bases, porém, informam valores de posição, não quantidades de ações.
+Por isso, o trabalho separa duas medidas. A primeira é a exposição em valor, útil para escala econômica,
+risco patrimonial e comparação em US\$. A segunda é a quantidade estimada de ações, construída para ITUB4 a
+partir do preço de fechamento da B3/COTAHIST \citep{b3_cotahist}. Essa segunda medida é a aproximação mais
+direta da demanda por ações.
 
 O trabalho responde a quatro perguntas:
 \begin{enumerate}
 \item Como medir a exposição das gestoras a ações em valor, com tratamento consistente de empréstimos de
-ações, grupos econômicos e fundos de cotas?
-\item A variação mensal da exposição é previsível?
-\item O nível da exposição reverte a uma alocação-alvo?
+ações e grupos econômicos?
+\item Como transformar a posição em valor de ITUB4 em quantidade estimada de ações, separando efeito de
+preço de mudança de demanda?
+\item A variação mensal da quantidade de ITUB4 é previsível?
+\item O nível da quantidade de ITUB4 reverte a uma alocação-alvo?
 \item A previsibilidade observada em ITUB4 se generaliza para outras ações?
 \end{enumerate}
 
@@ -132,7 +137,7 @@ mantida no trabalho. Como a citação exata ainda precisa ser confirmada, este e
 
 \section{Bases do núcleo empírico}
 
-O núcleo do trabalho usa duas bases públicas da CVM:
+O núcleo do trabalho usa duas bases públicas da CVM e uma base auxiliar de preços da B3:
 
 \paragraph{CONS.} A composição consolidada de carteiras tem granularidade fundo $\times$ mês $\times$ ativo.
 No período 2016--2021, a amostra tratada contém aproximadamente 21,1 milhões de linhas. A base é 100\%
@@ -143,6 +148,11 @@ científica.
 \paragraph{SH.} A série histórica dos fundos tem granularidade fundo $\times$ dia e traz informações de
 gestora, classificação, nome do fundo e patrimônio líquido. O PL vem em formato brasileiro e é convertido
 para número com parser específico.
+
+\paragraph{B3/COTAHIST.} A CONS não informa quantidade de ações. Para converter a posição em ITUB4 de valor
+para quantidade estimada, usa-se o fechamento diário oficial da B3/COTAHIST, mercado à vista
+(\texttt{TPMERC=010}), selecionando o último pregão de cada mês. A amostra de preços cobre os 72 meses entre
+janeiro de 2016 e dezembro de 2021, sem lacunas mensais.
 
 A ligação entre CONS e SH é feita por \texttt{Código} (CONS) igual a \texttt{COD\_FUNDO} (SH), mantendo o
 mesmo CNPJ e a mesma data de competência mensal. A revisão de qualidade encontrou apenas 2 fundos-mês da
@@ -159,6 +169,7 @@ Os principais tratamentos são:
 \item classificação das variantes de exposição em direta, cedida e obrigação;
 \item consolidação de gestoras por grupo econômico via regras de texto;
 \item conversão de R\$ para US\$ com PTAX de fim de mês (BCB SGS série~1);
+\item conversão de valor de ITUB4 para quantidade estimada de ações com fechamento mensal B3/COTAHIST;
 \item construção de deltas mensais apenas quando os meses são consecutivos.
 \end{itemize}
 
@@ -179,6 +190,35 @@ A definição principal é \emph{net}. No período, a soma das posições mensai
 definição direta, R\$\,540 bi na definição long e R\$\,496 bi na definição net. A definição net gera 264
 observações gestora-mês com posição líquida negativa, evidenciando a relevância do aluguel de ações.
 
+\section{Quantidade estimada de ações}
+
+Para estudar demanda, valor monetário não é suficiente. A posição em reais varia tanto por compra e venda de
+ações quanto por variação de preço. Como a CONS não traz número de ações, a quantidade é estimada por:
+\[
+q_{g,t}^{ITUB4} =
+\frac{V_{g,t}^{ITUB4}\times 1000}{P_t^{ITUB4}},
+\]
+em que $V_{g,t}^{ITUB4}$ é a posição em \texttt{Valor\_Ativo\_mil} e $P_t^{ITUB4}$ é o fechamento de ITUB4
+no último pregão do mês na B3/COTAHIST. A multiplicação por 1000 converte o valor da CONS de mil reais para
+reais.
+
+A mesma regra é aplicada às variantes direta, cedida e obrigação. Assim:
+\[
+q^{dir}=\frac{1000V^{dir}}{P},\quad
+q^{long}=\frac{1000(V^{dir}+V^{ced})}{P},\quad
+q^{net}=\frac{1000(V^{dir}+V^{ced}+V^{obrig})}{P}.
+\]
+Aqui, $dir$, $ced$ e $obrig$ indicam, respectivamente, posição direta, ações cedidas em empréstimo e
+obrigações por ações recebidas em empréstimo.
+A definição principal permanece \emph{net}. A validação numérica reconstrói o valor original por
+$q_{g,t}^{ITUB4}P_t^{ITUB4}/1000$ com erro máximo de aproximadamente $9{,}3\times10^{-10}$ mil reais, isto
+é, apenas erro de arredondamento de máquina.
+
+Essa quantidade deve ser lida como quantidade estimada, não observada diretamente. Ela é a melhor aproximação
+possível com CONS+B3, mas eventos societários que alterem mecanicamente o número de ações exigem cautela na
+interpretação temporal. No recorte empírico, a vantagem central continua sendo separar efeito de preço de
+mudança aproximada de demanda.
+
 \section{Unidade de análise}
 
 A unidade principal é a gestora consolidada por grupo econômico. Essa decisão torna a análise mais legível e
@@ -192,14 +232,17 @@ até o mês $t$ e prevê $t+h$. O benchmark é o \emph{random walk}: para a vari
 $\widehat{\Delta}=0$; para o nível, a previsão é $\widehat{y}_{t+h}=y_t$.
 
 As métricas são RMSE, MAE, \emph{skill} contra o \emph{random walk} e acerto de direção. PCA e fatores são
-estimados somente na janela de treino, sem usar informação futura.
+estimados somente na janela de treino, sem usar informação futura. A análise em valor é mantida para escala
+econômica; a análise em quantidade estimada é tratada como especificação principal de demanda para ITUB4.
 
 \chapter{Resultados}
 
-\section{Exposição em ITUB4}
+\section{Exposição e quantidade em ITUB4}
 
 O painel mostra que Itaú, Bradesco, BB, Kapitalo e Santander estão entre as maiores exposições médias a
-ITUB4 em US\$. A Figura~\ref{fig:pos} resume a evolução das maiores gestoras.
+ITUB4. A Figura~\ref{fig:pos} resume a exposição em valor, enquanto a Figura~\ref{fig:qtd} mostra a
+quantidade estimada de ações. A diferença entre as duas figuras é substantiva: a primeira mistura preço e
+quantidade; a segunda isola a aproximação de demanda.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.88\textwidth]{pos_usd_top_gestoras.png}
@@ -207,16 +250,23 @@ ITUB4 em US\$. A Figura~\ref{fig:pos} resume a evolução das maiores gestoras.
 \label{fig:pos}
 \end{figure}
 
+\begin{figure}[H]\centering
+\includegraphics[width=0.88\textwidth]{qtd_itub4_top_gestoras.png}
+\caption{Quantidade estimada de ITUB4 por gestora (milhões de ações, exposição net).}
+\label{fig:qtd}
+\end{figure}
+
 \begin{table}[H]\centering
-\caption{Definições de exposição em ITUB4.}
+\caption{Definições de exposição em ITUB4: valor e quantidade estimada.}
 \small
-\begin{tabular}{lrrr}
+\begin{tabular}{@{}lrrrr@{}}
 \toprule
-\textbf{Definição} & \textbf{Soma pos.\ mensais (R\$ bi)} & \textbf{Pos.\ média (US\$ mi)} & \textbf{Obs.\ negativas} \\
+\textbf{Def.} & \textbf{Valor (R\$ bi)} & \textbf{Média (US\$ mi)} &
+\textbf{Qtd.\ (bi ações)} & \textbf{Qtd.\ neg.} \\
 \midrule
-direta & 468 & 39,0 & 0 \\
-long   & 540 & 45,1 & 0 \\
-net    & 496 & 41,4 & 264 \\
+direta & 468 & 39,0 & 14,77 & 0 \\
+long   & 540 & 45,1 & 17,02 & 0 \\
+net    & 496 & 41,4 & 15,71 & 264 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -236,34 +286,43 @@ fragilidade por propriedade comum.
 
 \section{Previsão da variação mensal}
 
-Nas duas primeiras rodadas de forecasting, o alvo é a variação mensal da posição em US\$ para ITUB4. O
-resultado é negativo e informativo: AR, média e PCA não superam o \emph{random walk}. O PCA com mais fatores
-piora, sinal de \emph{overfitting} em uma janela curta.
+Nas primeiras rodadas de forecasting, o alvo era a variação mensal da posição em US\$ para ITUB4. O
+resultado já era negativo e informativo: AR, média e PCA não superavam o \emph{random walk}. Ao refazer o
+exercício em quantidade estimada de ações, que é a variável mais próxima de demanda, a conclusão se mantém e
+fica ainda mais clara. O melhor modelo, AR encolhido, melhora apenas 0,6\% no RMSE e piora no MAE. A direção
+fica em torno de 50\%.
 
 \begin{table}[H]\centering
-\caption{Variação mensal da posição em US\$: \emph{skill} contra random walk.}
+\caption{Variação mensal da quantidade estimada de ITUB4: \emph{skill} contra random walk.}
 \small
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrr}
 \toprule
-\textbf{Modelo} & \textbf{Skill RMSE} & \textbf{Skill MAE} & \textbf{Acerto direção} \\
+\textbf{Modelo} & \textbf{RMSE (mi ações)} & \textbf{Skill RMSE} & \textbf{Skill MAE} & \textbf{Direção} \\
 \midrule
-Random walk & 0,0\% & 0,0\% & -- \\
-AR encolhido & +1,0\% & -1,8\% & 47,8\% \\
-AR & -1,0\% & -6,3\% & 47,8\% \\
-PCA $k=1$ & -2,8\% & -8,6\% & 48,2\% \\
-PCA $k=3$ & -14,1\% & -23,0\% & 50,8\% \\
+Random walk & 5,42 & 0,0\% & 0,0\% & -- \\
+AR encolhido & 5,39 & +0,6\% & -0,9\% & 50,4\% \\
+AR & 5,49 & -1,2\% & -4,9\% & 50,4\% \\
+PCA $k=1$ & 6,29 & -16,1\% & -13,0\% & 50,0\% \\
+PCA $k=3$ & 6,19 & -14,2\% & -25,8\% & 50,4\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-A leitura é que a variação mensal se comporta aproximadamente como martingale. Esse resultado não é um
+\begin{figure}[H]\centering
+\includegraphics[width=0.76\textwidth]{forecast_quantity_delta_skill.png}
+\caption{\emph{Skill} de RMSE para a variação mensal da quantidade estimada de ITUB4.}
+\label{fig:qdelta}
+\end{figure}
+
+A leitura é que a variação mensal da demanda aproximada se comporta como martingale. Esse resultado não é um
 fracasso empírico; ele define onde a previsibilidade não está.
 
 \section{Previsão do nível e reversão à média}
 
-Ao mudar o alvo para o nível da posição, aparece previsibilidade. Para ITUB4, o AR individual reduz o RMSE
-em cerca de 10\% contra o \emph{random walk} nos horizontes de 1 e 3 meses. O modelo de painel melhora em
-horizontes mais longos, chegando a 9\% no horizonte de 6 meses.
+Ao mudar o alvo para o nível da posição em valor, aparece previsibilidade. Para ITUB4, o AR individual reduz
+o RMSE em cerca de 10\% contra o \emph{random walk} nos horizontes de 1 e 3 meses. O modelo de painel melhora
+em horizontes mais longos, chegando a 9\% no horizonte de 6 meses. Esse resultado é relevante para risco
+patrimonial, mas não deve ser interpretado automaticamente como previsibilidade de compras e vendas de ações.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.88\textwidth]{forecast_round3_skill.png}
@@ -271,10 +330,22 @@ horizontes mais longos, chegando a 9\% no horizonte de 6 meses.
 \label{fig:r3}
 \end{figure}
 
+Quando o alvo é o nível da quantidade estimada de ações, a evidência é mais fraca. O AR individual melhora o
+RMSE em 3,5\% no horizonte de um mês, mas perde para o \emph{random walk} em três e seis meses. O modelo de
+painel também não melhora a previsão. Portanto, a reversão em valor é mais forte do que a reversão em
+quantidade.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.76\textwidth]{forecast_quantity_level_skill.png}
+\caption{\emph{Skill} contra random walk no nível da quantidade estimada de ITUB4.}
+\label{fig:qlevel}
+\end{figure}
+
 O refinamento de meia-vida estima explicitamente a velocidade de retorno à alocação-alvo. Para a posição em
 US\$ de ITUB4, 36 de 37 gestoras revertem à média; o coeficiente $\rho$ mediano é aproximadamente 0,77 e a
-meia-vida mediana é 2,8 meses. No painel agregado, $\rho \approx 0,765$, o que implica meia-vida de cerca de
-2,6 meses.
+meia-vida mediana é 2,8 meses. Para a quantidade estimada, 33 de 37 gestoras revertem; o $\rho$ mediano sobe
+para aproximadamente 0,83, a meia-vida mediana vai para 3,8 meses e a meia-vida de painel chega a 6,0 meses.
+Isso sugere que a demanda em ações é mais persistente e menos previsível do que a exposição em valor.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.76\textwidth]{half_life_hist.png}
@@ -282,11 +353,19 @@ meia-vida mediana é 2,8 meses. No painel agregado, $\rho \approx 0,765$, o que 
 \label{fig:halflife}
 \end{figure}
 
+\begin{figure}[H]\centering
+\includegraphics[width=0.76\textwidth]{half_life_quantity_hist.png}
+\caption{Meia-vida da reversão da quantidade estimada de ITUB4.}
+\label{fig:qhalflife}
+\end{figure}
+
 \section{Generalização do forecasting}
 
-A rodada com todas as ações mostra que a previsibilidade do nível não é geral. Entre 238 ações elegíveis, a
-mediana da \emph{skill} é negativa e apenas uma parcela pequena supera o \emph{random walk}. ITUB4 fica entre
-as melhores, com \emph{skill} próxima de 9,9\%, ao lado de outras ações muito líquidas e amplamente detidas.
+A rodada com todas as ações, ainda em valor, mostra que a previsibilidade do nível não é geral. Entre 238
+ações elegíveis, a mediana da \emph{skill} é negativa e apenas uma parcela pequena supera o \emph{random
+walk}. ITUB4 fica entre as melhores, com \emph{skill} próxima de 9,9\%, ao lado de outras ações muito
+líquidas e amplamente detidas. Essa evidência deve ser lida como resultado de exposição patrimonial; a
+generalização para quantidade exigiria baixar e validar preços mensais para todos os tickers.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.82\textwidth]{forecast_round5_skill_hist.png}
@@ -303,16 +382,21 @@ parece útil como motor de previsão neste desenho.
 
 \chapter{Conclusão}
 
-O projeto entrega três conclusões principais. Primeiro, é possível construir um painel mensal coerente de
+O projeto entrega quatro conclusões principais. Primeiro, é possível construir um painel mensal coerente de
 exposição das gestoras a ações usando CONS e SH, com tratamento cuidadoso de formato numérico, empréstimos de
-ações, grupos econômicos e PTAX. Segundo, a variação mensal da exposição é difícil de prever; o
-\emph{random walk} é um benchmark forte. Terceiro, existe previsibilidade no nível da posição para ações
-muito detidas, especialmente ITUB4, por reversão a uma alocação-alvo.
+ações, grupos econômicos e PTAX. Segundo, para ITUB4, é possível transformar exposição em valor em quantidade
+estimada de ações usando fechamento mensal oficial da B3/COTAHIST, com auditoria numérica direta. Terceiro,
+a variação mensal da quantidade estimada é difícil de prever; o \emph{random walk} é um benchmark forte.
+Quarto, a previsibilidade em valor é maior do que a previsibilidade em quantidade, o que mostra que parte da
+reversão observada em US\$ vem de dinâmica patrimonial e de preço, não necessariamente de demanda previsível
+por ações.
 
-A interpretação econômica é consistente com \emph{demand-based asset pricing}. A demanda institucional muda
-de forma ruidosa no curto prazo, mas algumas ações muito líquidas e amplamente detidas parecem ter níveis de
-exposição-alvo para os quais as gestoras retornam. Esses mesmos papéis são os mais relevantes para a
-discussão de fragilidade, pois concentram demanda institucional sobreposta.
+A interpretação econômica fica mais precisa. A demanda institucional medida em número aproximado de ações
+muda de forma ruidosa no curto prazo. Já a exposição em valor de algumas ações muito líquidas e amplamente
+detidas parece retornar a níveis patrimoniais de referência. Essa distinção é central para
+\emph{demand-based asset pricing}: se o objeto é demanda, quantidade deve ser privilegiada; se o objeto é
+risco patrimonial, valor é a medida apropriada. Esses mesmos papéis continuam relevantes para a discussão de
+fragilidade, pois concentram demanda institucional sobreposta.
 
 O uso da CDA deve permanecer no apêndice até validação explícita com o orientador. A base é tecnicamente
 adequada para reconstruir relações fundo$\to$fundo, mas ela não foi parte do desenho inicial. A contribuição

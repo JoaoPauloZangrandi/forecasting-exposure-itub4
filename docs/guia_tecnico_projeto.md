@@ -6,14 +6,15 @@ resultados, limites e caminhos futuros.
 
 ## 1. Ideia em linguagem simples
 
-O projeto mede quanto cada gestora brasileira esta exposta a ações. Primeiro fazemos isso para ITUB4, depois
-para todas as ações reconheciveis na base. A pergunta de forecasting e: essa exposição e previsivel?
+O projeto mede quanto cada gestora brasileira esta exposta a ações. Para ITUB4, ele agora separa duas coisas
+que antes podiam ficar misturadas: exposição em valor e quantidade estimada de ações. Valor mede escala
+patrimonial; quantidade e a proxy mais direta de demanda.
 
 A resposta empirica e:
 
-- A variação mensal da exposição e dificil de prever. O random walk e um benchmark forte.
-- O nivel da exposição em algumas blue chips, como ITUB4, tem reversão a media.
-- A reversão sugere que gestoras tem uma alocação-alvo para certas ações liquidas e muito detidas.
+- A variação mensal da quantidade estimada de ITUB4 e dificil de prever. O random walk e um benchmark forte.
+- O nivel da exposição em valor tem reversão a media mais clara do que a quantidade.
+- Isso sugere que parte da previsibilidade em valor vem de preço/marcação patrimonial, nao apenas de demanda.
 - A rede fundo-sobre-fundo, reconstruida via CDA, nao melhorou a previsão; ela e mais util para discutir
   risco e dupla contagem.
 
@@ -38,8 +39,8 @@ para este projeto e que carteiras institucionais observadas revelam demanda por 
 apenas para retornos ou fundamentos, o pesquisador observa as posições dos investidores e tenta entender a
 estrutura da demanda.
 
-No projeto, as gestoras sao as unidades de demanda. A posição de uma gestora em uma ação e a quantidade
-empirica que usamos para estudar demanda institucional.
+No projeto, as gestoras sao as unidades de demanda. A medida mais proxima de demanda e a quantidade estimada
+de ações, nao o valor em reais. Valor continua importante, mas mede escala patrimonial e risco.
 
 ### 3.2 Gabaix e Koijen
 
@@ -129,6 +130,23 @@ Colunas usadas:
 A CDA nao e necessaria para construir o painel principal de exposição. Ela e usada no apendice para estudar
 estrutura fundo-sobre-fundo e dupla contagem.
 
+### 4.4 B3/COTAHIST
+
+A CONS nao traz quantidade de ações. Para ITUB4, a quantidade e estimada usando o fechamento mensal da B3:
+
+```text
+quantidade = Valor_Ativo_mil * 1000 / preco_fechamento_ITUB4
+```
+
+Fonte usada: COTAHIST anual da B3, mercado a vista (`TPMERC=010`), ultimo pregao de cada mes. O script baixa
+os zips anuais temporariamente, filtra `CODNEG == ITUB4`, seleciona fechamento (`PREULT`) e grava:
+
+- `data/processed/itub4_b3_prices_daily.csv`;
+- `data/processed/itub4_b3_prices_monthly.csv`;
+- `outputs/tables/itub4_b3_price_coverage.csv`.
+
+Auditoria: os 72 meses entre 2016 e 2021 estao cobertos, sem preço faltante.
+
 ## 5. Tratamentos de dados
 
 ### 5.1 CNPJ
@@ -196,7 +214,30 @@ tempo.
 
 Script: função `get_ptax()` em `R/05_build_panel.R`.
 
-### 5.8 Deltas gap-safe
+### 5.8 Quantidade estimada de ITUB4
+
+Para ITUB4, `R/05_build_panel.R` agora calcula:
+
+- `preco_itub4_brl`;
+- `qtd_direta`;
+- `qtd_cedida`;
+- `qtd_obrig`;
+- `qtd_itub4`;
+- `delta_qtd_itub4`.
+
+A definição de `qtd_itub4` respeita a definição de exposição:
+
+- direta: `qtd_direta`;
+- long: `qtd_direta + qtd_cedida`;
+- net: `qtd_direta + qtd_cedida + qtd_obrig`.
+
+A tabela `outputs/tables/quantity_conversion_audit.csv` confirma que:
+
+- nao ha preço faltante;
+- nao ha quantidade faltante;
+- `qtd_itub4 * preco / 1000` reconstrói `pos_brl_mil` com erro numerico de maquina.
+
+### 5.9 Deltas gap-safe
 
 A variação mensal so e calculada quando os meses sao consecutivos. Isso evita delta artificial quando ha
 lacuna de dados.
@@ -244,6 +285,7 @@ codigo e CNPJ.
 
 - posição em R$;
 - posição em US$;
+- quantidade estimada de ações;
 - PL;
 - peso;
 - deltas;
@@ -269,7 +311,8 @@ Scripts:
 - `R/15_forecast_round3.R`: nivel da posição e horizontes 1, 3 e 6;
 - `R/16_forecast_round4.R`: features de rede via CDA;
 - `R/17_forecast_round5.R`: generalização do forecast de nivel para todas as ações;
-- `R/19_half_life.R`: meia-vida da reversão a media.
+- `R/19_half_life.R`: meia-vida da reversão a media em valor, quantidade e peso;
+- `R/20_forecast_quantity.R`: forecasting usando quantidade estimada de ITUB4.
 
 ## 7. Resultados principais
 
@@ -288,28 +331,34 @@ Somas de posições mensais:
 - long: R$ 540 bi;
 - net: R$ 496 bi.
 
+Quantidade estimada acumulada no painel:
+
+- direta: 14,77 bi ações;
+- long: 17,02 bi ações;
+- net: 15,71 bi ações.
+
 ### 7.2 Todas as ações
 
 O painel reconhece 836 tickers. As ações detidas pelo maior numero de gestoras sao blue chips. Isso indica
 concentração de demanda institucional em ativos liquidos e centrais no indice.
 
-### 7.3 Forecast da variação
+### 7.3 Forecast da variação em quantidade
 
 Resultado: sem previsibilidade robusta.
 
-- AR nao bate random walk.
+- AR encolhido melhora apenas 0,6% em RMSE e piora em MAE.
 - PCA piora, especialmente com mais fatores.
 - Direção fica perto de 50%.
 
-Interpretação: variação mensal e muito ruidosa.
+Interpretação: variação mensal da demanda aproximada e muito ruidosa.
 
 ### 7.4 Forecast do nivel
 
-Resultado: previsibilidade aparece no nivel da posição em US$.
+Resultado: previsibilidade aparece mais claramente no nivel da posição em US$ do que na quantidade.
 
 - ITUB4: AR individual reduz RMSE em cerca de 10%.
-- Peso nao tem o mesmo comportamento.
-- Modelo de painel melhora em horizontes mais longos.
+- Em quantidade, AR individual melhora 3,5% em h=1, mas perde para o random walk em h=3 e h=6.
+- Isso indica que a reversão em valor nao deve ser vendida como reversão forte de demanda.
 
 ### 7.5 Half-life
 
@@ -317,11 +366,9 @@ O AR(1) no nivel estima velocidade de reversão a alocação-alvo.
 
 Resultado:
 
-- 36 de 37 gestoras revertem;
-- rho mediano perto de 0,77;
-- meia-vida mediana de 2,8 meses;
-- pooled rho perto de 0,765;
-- meia-vida pooled de 2,6 meses.
+- valor em US$: 36 de 37 gestoras revertem, rho mediano perto de 0,77, meia-vida mediana de 2,8 meses;
+- quantidade estimada: 33 de 37 gestoras revertem, rho mediano perto de 0,83, meia-vida mediana de 3,8 meses;
+- pooled em quantidade: rho perto de 0,891, meia-vida de 6,0 meses.
 
 ### 7.6 CDA e de-duplicação
 
@@ -443,6 +490,7 @@ Ordem minima:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/15_forecast_round3.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/17_forecast_round5.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/20_forecast_quantity.R
 ```
 
 Se a CDA for usada:
@@ -477,6 +525,7 @@ pdflatex -interaction=nonstopmode tcc.tex
 O resultado mais defensavel e:
 
 > Com CONS e SH, construimos um painel confiavel da exposição das gestoras a ações. A variação mensal da
-> exposição e pouco previsivel, mas o nivel da posição em blue chips reverte a uma alocação-alvo. A CDA, em
-> apendice, sugere que estruturas FIC/master podem gerar dupla contagem intra-gestora relevante, mas esse eixo
-> deve ser validado separadamente com o orientador.
+> quantidade estimada de ITUB4 e pouco previsivel; a reversão em valor e mais forte do que a reversão em
+> quantidade, mostrando que preço e marcação patrimonial importam. A CDA, em apendice, sugere que estruturas
+> FIC/master podem gerar dupla contagem intra-gestora relevante, mas esse eixo deve ser validado
+> separadamente com o orientador.

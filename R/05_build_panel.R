@@ -1,7 +1,9 @@
 # =============================================================================
 # 05_build_panel.R — painel gestora × mês para ITUB4.
-# Alvo primário (decisão do orientador): POSIÇÃO em R$ e US$ e sua variação
-# mensal. Peso é descritivo. Posição = NET (direta + cedida + obrigações).
+# Exposição em valor (R$/US$) mede escala econômica; quantidade estimada de
+# ações mede demanda, removendo o efeito mecânico do preço:
+#   qtd = valor_mil * 1000 / preco_fechamento_B3.
+# Posição = NET (direta + cedida + obrigações).
 # =============================================================================
 suppressPackageStartupMessages({ library(data.table); library(stringr); library(jsonlite) })
 
@@ -18,7 +20,8 @@ get_ptax <- function() {
   dt[, .SD[.N], by = .(ano, mes)][, .(ano, mes, ptax)]   # última cotação do mês
 }
 
-build_panel <- function(itub4_fm, sh_monthly, ptax_monthly, exposicao = EXPOSICAO) {
+build_panel <- function(itub4_fm, sh_monthly, ptax_monthly, price_monthly = NULL,
+                        exposicao = EXPOSICAO) {
   sh <- copy(sh_monthly)
   sh[, gestora_grp := apply_group(gestora)]
   # Blindagem: gestora em branco/NA vira NA (evita "grupo fantasma" se algum ano
@@ -65,8 +68,24 @@ build_panel <- function(itub4_fm, sh_monthly, ptax_monthly, exposicao = EXPOSICA
 
   panel[, `:=`(ano = year(data), mes = month(data))]
   panel <- merge(panel, ptax_monthly, by = c("ano", "mes"), all.x = TRUE)
+  if (!is.null(price_monthly)) {
+    px <- copy(price_monthly)[, .(ano, mes, data_preco_b3 = data,
+                                  preco_itub4_brl = preco_fechamento_brl)]
+    panel <- merge(panel, px, by = c("ano", "mes"), all.x = TRUE)
+  } else {
+    panel[, `:=`(data_preco_b3 = as.Date(NA), preco_itub4_brl = NA_real_)]
+  }
   panel[, pos_usd_mil := pos_brl_mil / ptax]
   panel[, peso_itub4 := fifelse(pl_mil > 0, pos_brl_mil / pl_mil, NA_real_)]
+  panel[, `:=`(
+    qtd_direta = fifelse(preco_itub4_brl > 0, valor_direta_mil * 1000 / preco_itub4_brl, NA_real_),
+    qtd_cedida = fifelse(preco_itub4_brl > 0, valor_cedida_mil * 1000 / preco_itub4_brl, NA_real_),
+    qtd_obrig  = fifelse(preco_itub4_brl > 0, valor_obrig_mil  * 1000 / preco_itub4_brl, NA_real_)
+  )]
+  panel[, qtd_itub4 := switch(exposicao,
+                              direta = qtd_direta,
+                              long   = qtd_direta + qtd_cedida,
+                              net    = qtd_direta + qtd_cedida + qtd_obrig)]
 
   # Variações mensais "gap-safe": só entre meses consecutivos (<= GAP_MAX_DIAS).
   setorder(panel, gestora_grp, data)
@@ -74,23 +93,28 @@ build_panel <- function(itub4_fm, sh_monthly, ptax_monthly, exposicao = EXPOSICA
   panel[, consec := !is.na(gap) & gap <= GAP_MAX_DIAS]
   panel[, delta_pos_brl_mil := fifelse(consec, pos_brl_mil - shift(pos_brl_mil), NA_real_), by = gestora_grp]
   panel[, delta_pos_usd_mil := fifelse(consec, pos_usd_mil - shift(pos_usd_mil), NA_real_), by = gestora_grp]
+  panel[, delta_qtd_itub4 := fifelse(consec, qtd_itub4 - shift(qtd_itub4), NA_real_), by = gestora_grp]
   panel[, c("gap", "consec") := NULL]
 
   setnames(panel, "gestora_grp", "gestora")
   setcolorder(panel, c("data", "ano", "mes", "gestora",
-                       "pos_brl_mil", "pos_usd_mil", "ptax",
+                       "pos_brl_mil", "pos_usd_mil", "ptax", "data_preco_b3",
+                       "preco_itub4_brl", "qtd_itub4", "qtd_direta",
+                       "qtd_cedida", "qtd_obrig",
                        "valor_direta_mil", "valor_cedida_mil", "valor_obrig_mil",
                        "n_fundos_itub4", "pl_mil", "n_fundos_gestora", "peso_itub4",
-                       "delta_pos_brl_mil", "delta_pos_usd_mil"))
+                       "delta_pos_brl_mil", "delta_pos_usd_mil", "delta_qtd_itub4"))
   list(panel = panel[], unmatched = unmatched)
 }
 
-# Estacionariedade (ADF): não diferenciar o peso; diferenciar a posição.
+# Estacionariedade (ADF): quantidade é o proxy de demanda; valor mede escala.
 run_adf <- function(panel) {
   panel[, .(
     n       = sum(is.finite(pos_usd_mil)),
     p_peso  = adf_pvalue(peso_itub4),
     p_pos   = adf_pvalue(pos_usd_mil),
-    p_delta = adf_pvalue(delta_pos_usd_mil)
+    p_delta = adf_pvalue(delta_pos_usd_mil),
+    p_qtd   = adf_pvalue(qtd_itub4),
+    p_delta_qtd = adf_pvalue(delta_qtd_itub4)
   ), by = gestora][n >= ADF_MIN_OBS][order(gestora)]
 }

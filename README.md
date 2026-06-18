@@ -3,9 +3,10 @@
 Trabalho de Conclusão de Curso (FGV EESP) — orientador Prof. Maurício Ferraresi Jr.
 
 O objetivo central é **medir e prever a exposição das gestoras a ações** no mercado brasileiro. O método é
-validado com **uma ação (ITUB4 — Itaú Unibanco PN)** antes de estender para as demais. A motivação teórica
-vem de *demand-based asset pricing*: preços se formam em parte pela demanda dos investidores institucionais,
-que pode ter estrutura, inércia e co-movimento.
+validado com **uma ação (ITUB4 — Itaú Unibanco PN)** antes de estender para as demais. Para ITUB4, o projeto
+agora separa exposição em **valor** (escala patrimonial/risco) e **quantidade estimada de ações** (proxy mais
+direta de demanda). A motivação teórica vem de *demand-based asset pricing*: preços se formam em parte pela
+demanda dos investidores institucionais, que pode ter estrutura, inércia e co-movimento.
 
 O repositório também contém uma **extensão exploratória** com a CDA Bloco 2 para reconstruir relações
 fundo→fundo e estudar dupla contagem em estruturas FIC/master. Essa extensão é útil para o eixo de risco, mas
@@ -24,9 +25,10 @@ R/                 pipeline modular em R
   02_load_cons.R       carrega CONS por ano; ITUB4 por variante (direta/cedida/obrigação) e fundo-mês
   03_load_sh.R         carrega SH; PL, gestora, universo mensal; auditorias
   04_consolidate_groups.R  consolidação robusta de grupos econômicos
-  05_build_panel.R     painel gestora×mês: posição R$ e US$ (PTAX), peso, deltas, ADF
+  05_build_panel.R     painel gestora×mês: posição R$/US$, quantidade estimada, peso, deltas, ADF
   06_diagnostics.R     validação dos fatos das bases + cobertura
   07_correlation.R     matrizes de correlação entre gestoras + heatmap
+  08_load_prices.R     baixa COTAHIST/B3 e gera preços mensais de ITUB4
   99_run_all.R         orquestra os módulos-base de exposição (só ITUB4)
   10_build_cda_edges.R     extensão CDA: baixa Bloco 2 e extrai arestas fundo->fundo
   11_fund_graph.R          extensão CDA: sumariza a rede fundo-sobre-fundo
@@ -38,6 +40,7 @@ R/                 pipeline modular em R
   17_forecast_round5.R     forecast de nível para todas as ações elegíveis
   18_data_review.R         revisão profunda das bases e auditorias
   19_half_life.R           meia-vida de reversão à alocação-alvo
+  20_forecast_quantity.R   forecasting usando quantidade estimada de ITUB4
   forecasting_scaffold.R   esqueleto histórico; não é usado no pipeline atual
 docs/              tcc.tex/pdf (TCC único), refs.bib e guia_tecnico_projeto.md
 notebooks/         exploração
@@ -63,7 +66,8 @@ Chave de ligação: `Código` (CONS) == `COD_FUNDO` (SH) para o mesmo CNPJ.
 ## Decisões metodológicas (travadas com o orientador)
 
 1. **Unidade:** gestora, consolidada por grupo econômico (Itaú, BTG, XP, ...).
-2. **Medida:** **valor** (não quantidade), em **R$ e em US$** (PTAX fim de mês, BCB SGS série 1).
+2. **Medidas:** **valor** em R$/US$ para escala patrimonial e **quantidade estimada de ações** para demanda
+   em ITUB4. A quantidade é `Valor_Ativo_mil * 1000 / fechamento_ITUB4_B3`.
 3. **Exposição:** três definições geradas em paralelo — **direta** (só `ITAUUNIBANCO PN N1 - ITUB4`), **long** (+ cedida em empréstimo) e **net** (+ obrigações, negativas). Primária = **net**; todas exportadas (`painel_itub4_{direta,long,net}.csv`).
 4. **Modelar a posição** (em R$/US$), que é não-estacionária → diferenciar; **não diferenciar o peso**
    (estacionário). Rodar ADF e reportar.
@@ -114,6 +118,7 @@ Extensão para todas as ações e forecast:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/17_forecast_round5.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/18_data_review.R
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/19_half_life.R
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/20_forecast_quantity.R
 ```
 
 Extensão CDA, se aprovada no escopo do TCC:
@@ -139,9 +144,9 @@ Fase atual: pipeline de exposição validado para ITUB4, extensão para todas as
 das bases CONS+SH e rodadas de forecasting já executadas. A CDA/de-duplicação está mantida como módulo
 complementar até validação explícita com o orientador.
 
-Resultado central das rodadas de previsão: a variação mensal da posição em ITUB4 é difícil de bater
-contra random walk; a previsibilidade aparece melhor no **nível** da exposição, com reversão à média
-e meia-vida interpretável. Na rodada com todas as ações, ITUB4 fica entre as ações com skill positivo
-do AR contra random walk, mas o sinal é heterogêneo por ticker. As features de rede foram testadas
-como preditor incremental e não acrescentaram ganho material sobre o AR de painel na especificação
-atual.
+Resultado central das rodadas de previsão: a variação mensal da **quantidade estimada** de ITUB4 é difícil de
+bater contra random walk. A previsibilidade aparece mais forte no **nível em valor** do que no nível em
+quantidade, indicando que preço/marcação patrimonial explicam parte da reversão. Na rodada com todas as ações,
+ITUB4 fica entre as ações com skill positivo do AR contra random walk em valor, mas o sinal é heterogêneo por
+ticker. As features de rede foram testadas como preditor incremental e não acrescentaram ganho material sobre
+o AR de painel na especificação atual.
