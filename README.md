@@ -2,15 +2,14 @@
 
 Trabalho de Conclusão de Curso (FGV EESP) — orientador Prof. Maurício Ferraresi Jr.
 
-O objetivo central é **medir e prever a exposição das gestoras a ações** no mercado brasileiro. O método é
-validado com **uma ação (ITUB4 — Itaú Unibanco PN)** antes de estender para as demais. Para ITUB4, o projeto
-agora separa exposição em **valor** (escala patrimonial/risco) e **quantidade estimada de ações** (proxy mais
-direta de demanda). A motivação teórica vem de *demand-based asset pricing*: preços se formam em parte pela
-demanda dos investidores institucionais, que pode ter estrutura, inércia e co-movimento.
+O objetivo central é **medir e prever a exposição das gestoras a ações** no mercado brasileiro, motivado pela
+literatura de *demand-based asset pricing*. O desenho atual é um sistema de forecasting por gestora e ação:
+para cada ação, mês a mês, medir quem aumentou ou reduziu exposição e testar se o histórico da gestora, o
+restante do mercado e a rede de fundos interconectados ajudam a prever a exposição futura.
 
-O repositório também contém uma **extensão exploratória** com a CDA Bloco 2 para reconstruir relações
-fundo→fundo e estudar dupla contagem em estruturas FIC/master. Essa extensão é útil para o eixo de risco, mas
-deve ser validada com o orientador antes de virar parte central do TCC.
+A medida principal é **exposição em valor** (R$ e US$), por ser mais didática e diretamente ligada a risco
+patrimonial. A quantidade estimada de ações entra como robustez para ITUB4. A CDA Bloco 2 é usada para
+reconstruir relações fundo→fundo e formar a camada de rede do sistema preditivo.
 
 **Período:** 2016–2021 (carteiras mensais).
 
@@ -30,9 +29,9 @@ R/                 pipeline modular em R
   07_correlation.R     matrizes de correlação entre gestoras + heatmap
   08_load_prices.R     baixa COTAHIST/B3 e gera preços mensais de ITUB4
   99_run_all.R         orquestra os módulos-base de exposição (só ITUB4)
-  10_build_cda_edges.R     extensão CDA: baixa Bloco 2 e extrai arestas fundo->fundo
-  11_fund_graph.R          extensão CDA: sumariza a rede fundo-sobre-fundo
-  12_all_stocks.R          generaliza o painel para todas as ações; de-dup CDA é complementar
+  10_build_cda_edges.R     camada CDA/rede: baixa Bloco 2 e extrai arestas fundo->fundo
+  11_fund_graph.R          camada CDA/rede: sumariza a rede fundo-sobre-fundo
+  12_all_stocks.R          generaliza o painel para todas as ações; de-dup por CDA é complementar
   13_forecast_itub4.R      primeira rodada de forecasting para ITUB4
   14_forecast_round2.R     robustez: PCA menor, AR encolhido, MAE e direção
   15_forecast_round3.R     previsibilidade de nível e horizontes 1/3/6 meses
@@ -63,28 +62,29 @@ sem editar o código via variável de ambiente `CVM_DATA_DIR`.
 
 Chave de ligação: `Código` (CONS) == `COD_FUNDO` (SH) para o mesmo CNPJ.
 
-## Decisões metodológicas (travadas com o orientador)
+## Decisões metodológicas atuais
 
 1. **Unidade:** gestora, consolidada por grupo econômico (Itaú, BTG, XP, ...).
-2. **Medidas:** **valor** em R$/US$ para escala patrimonial e **quantidade estimada de ações** para demanda
-   em ITUB4. A quantidade é `Valor_Ativo_mil * 1000 / fechamento_ITUB4_B3`.
+2. **Medidas:** **valor** em R$/US$ como medida principal de exposição e risco; **quantidade estimada de
+   ações** como robustez para separar preço e quantidade em ITUB4. A quantidade é
+   `Valor_Ativo_mil * 1000 / fechamento_ITUB4_B3`.
 3. **Exposição:** três definições geradas em paralelo — **direta** (só `ITAUUNIBANCO PN N1 - ITUB4`), **long** (+ cedida em empréstimo) e **net** (+ obrigações, negativas). Primária = **net**; todas exportadas (`painel_itub4_{direta,long,net}.csv`).
-4. **Modelar a posição** (em R$/US$), que é não-estacionária → diferenciar; **não diferenciar o peso**
-   (estacionário). Rodar ADF e reportar.
+4. **Modelagem:** prever nível e variação da exposição. O nível em R$/US$ captura risco patrimonial; a
+   variação mensal testa aumento/redução de exposição.
 5. **Manter os FICs** — a estrutura aninhada é o objeto de estudo, não ruído.
 
-## Extensão CDA
+## CDA e rede de fundos
 
 A CONS é **100% "Ações"**: as relações fundo→fundo foram apagadas pela consolidação. Por isso, qualquer
 análise explícita de grafo fundo-sobre-fundo precisa de uma base adicional. A opção usada aqui é a **CDA não
 consolidada** da CVM, Bloco BLC_2 de "Cotas de Fundos".
 
-Essa CDA **não é necessária** para construir o painel de exposição ou para rodar o forecasting. Ela é uma
-extensão exploratória para medir estrutura FIC/master e dupla contagem. A CDA Bloco 2 (2016–2021) já foi
-baixada e as arestas fundo→fundo extraídas (`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora
-do git). No arquivo histórico processado, o campo `DT_CONFID_APLIC` aparece preenchido em parte das arestas,
-mas `CNPJ_FUNDO_COTA` está disponível; portanto, não tratar essas linhas automaticamente como destino
-mascarado. A de-duplicação reportada é **intra-gestora**.
+A CDA Bloco 2 (2016–2021) já foi baixada e as arestas fundo→fundo extraídas
+(`R/10_build_cda_edges.R` → `data/processed/cda_edges.csv`, fora do git). Ela serve para: (i) testar se há
+circularidade nas estruturas FIC/master; (ii) medir profundidade de aninhamento; (iii) estimar dupla contagem
+intra-gestora; e (iv) criar features de rede para forecasting. No arquivo histórico processado, o campo
+`DT_CONFID_APLIC` aparece preenchido em parte das arestas, mas `CNPJ_FUNDO_COTA` está disponível; portanto,
+não tratar essas linhas automaticamente como destino mascarado.
 
 ## Como rodar
 
@@ -121,7 +121,7 @@ Extensão para todas as ações e forecast:
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/20_forecast_quantity.R
 ```
 
-Extensão CDA, se aprovada no escopo do TCC:
+Camada de rede/CDA:
 
 ```powershell
 & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" R/_prep_fund_extracts.R
@@ -140,13 +140,10 @@ Para entender o projeto em nível operacional, use `docs/guia_tecnico_projeto.md
 
 ## Status
 
-Fase atual: pipeline de exposição validado para ITUB4, extensão para todas as ações, revisão profunda
-das bases CONS+SH e rodadas de forecasting já executadas. A CDA/de-duplicação está mantida como módulo
-complementar até validação explícita com o orientador.
+Fase atual: pipeline de exposição validado para ITUB4, extensão para todas as ações, revisão profunda das
+bases CONS+SH+CDA, rodadas de forecasting e primeira feature de rede executadas.
 
-Resultado central das rodadas de previsão: a variação mensal da **quantidade estimada** de ITUB4 é difícil de
-bater contra random walk. A previsibilidade aparece mais forte no **nível em valor** do que no nível em
-quantidade, indicando que preço/marcação patrimonial explicam parte da reversão. Na rodada com todas as ações,
-ITUB4 fica entre as ações com skill positivo do AR contra random walk em valor, mas o sinal é heterogêneo por
-ticker. As features de rede foram testadas como preditor incremental e não acrescentaram ganho material sobre
-o AR de painel na especificação atual.
+Resultado central: o projeto deve ser motivado como forecasting de demanda/exposição. A variação mensal é
+difícil de bater contra random walk; o nível em valor tem alguma reversão à média; e a rede CDA é a
+infraestrutura para avançar para modelos de grafo. A primeira feature manual de vizinhos não melhora o AR de
+painel, então ela funciona como baseline, não como conclusão contra GNN.

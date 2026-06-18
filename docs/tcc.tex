@@ -16,13 +16,14 @@
 \renewcommand{\arraystretch}{1.15}
 
 \begin{document}
+\hypersetup{pageanchor=false}
 
 \begin{titlepage}
 \centering
 \vspace*{1cm}
 {\scshape\large Fundação Getulio Vargas \\ Escola de Economia de São Paulo (EESP)\par}
 \vspace{2.5cm}
-{\huge\bfseries Forecasting da exposição e da demanda de gestoras por ações\par}
+{\huge\bfseries Forecasting da exposição de gestoras a ações em redes de fundos\par}
 \vspace{0.8cm}
 {\Large Evidência do mercado brasileiro de fundos, 2016--2021\par}
 \vspace{3cm}
@@ -33,65 +34,73 @@
 {\large São Paulo \\ \today\par}
 \end{titlepage}
 
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
+
 \chapter*{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
-Este trabalho mede a exposição das gestoras brasileiras a ações e testa sua previsibilidade sob a ótica do
-\emph{demand-based asset pricing}. O núcleo empírico usa bases públicas da CVM, a composição consolidada de
-carteiras (CONS) e a série histórica dos fundos (SH), para construir um painel mensal gestora $\times$ mês,
-consolidado por grupo econômico, com validação inicial em ITUB4 e extensão para todas as ações identificáveis
-no período 2016--2021. A exposição em valor (R\$ e US\$) mede escala patrimonial e risco. Para aproximar
-demanda, este trabalho constrói também uma medida de quantidade estimada de ações, dividindo o valor de ITUB4
-pelo fechamento mensal oficial da B3/COTAHIST.
+Este trabalho mede a exposição das gestoras brasileiras a ações e formula um sistema de previsão inspirado
+em \emph{demand-based asset pricing}. A unidade empírica é gestora $\times$ mês $\times$ ação: para cada ação,
+observa-se quais gestoras aumentaram ou reduziram exposição e testa-se se esse movimento pode ser previsto a
+partir do próprio histórico, do restante do mercado e da rede de fundos interconectados. O núcleo empírico usa
+as bases CONS e SH da CVM para medir exposição em R\$ e US\$ e a CDA Bloco~2 para reconstruir relações
+fundo$\to$fundo, necessárias para representar estruturas FIC/master como grafo.
 
-Os resultados mostram que a distinção entre valor e quantidade é substantiva. Em valor, o nível da posição em
-ITUB4 apresenta reversão à média e o AR reduz o RMSE em aproximadamente 10\% em relação ao \emph{random
-walk}. Em quantidade estimada de ações, entretanto, a previsibilidade é bem menor: a variação mensal continua
-próxima de um \emph{random walk} e o ganho no nível aparece apenas no horizonte de um mês, com cerca de 3,5\%
-de redução de RMSE. Assim, parte da previsibilidade em valor parece refletir marcação a mercado e reversão
-patrimonial, não necessariamente compras e vendas previsíveis de ações. Como apêndice metodológico, o
-trabalho documenta uma extensão com a CDA Bloco~2, que reconstrói relações fundo$\to$fundo e estima dupla
-contagem intra-gestora em estruturas FIC/master. Essa extensão é útil para discutir risco estrutural, mas fica
-separada do núcleo CONS+SH+B3 até validação explícita com o orientador.
+O resultado central de dados é que a exposição institucional é concentrada em \emph{blue chips} e que as
+estruturas fundo-sobre-fundo são economicamente relevantes. A rede CDA não apresenta ciclos nos 72 meses
+analisados, respondendo à preocupação com estruturas circulares, mas revela profundidade de aninhamento e
+duplicação material: em ITUB4, a soma bruta intra-gestora é cerca de 37,6\% maior do que a exposição
+de-duplicada. No forecasting, os modelos lineares e fatoriais mostram que a variação mensal é difícil de
+prever; já o nível da exposição em valor apresenta alguma reversão à média. A quantidade estimada de ITUB4,
+construída com preço B3/COTAHIST, entra como robustez para separar preço de quantidade. Ela confirma que a
+demanda aproximada em ações é mais ruidosa do que a exposição patrimonial em valor.
 
 \noindent\textbf{Palavras-chave:} demand-based asset pricing; fundos de investimento; exposição em ações;
-forecasting; reversão à média; CVM.
+forecasting; redes; CVM.
 
 \tableofcontents
 
+\clearpage
+\pagenumbering{arabic}
+
 \chapter{Introdução}
 
-O objetivo deste trabalho é medir e prever a exposição das gestoras brasileiras a ações. A pergunta empírica
-nasce de uma ideia simples: se investidores institucionais têm demandas persistentes por ativos, então as
-carteiras observadas podem conter informação sobre comportamento futuro. A literatura de
-\emph{demand-based asset pricing} fornece a motivação: preços não são determinados apenas por fundamentos
-agregados, mas também pela demanda de investidores com restrições, preferências e mandatos específicos
-\citep{koijenyogo2019,gabaixkoijen2021}.
+O objetivo deste trabalho é medir e prever a exposição das gestoras brasileiras a ações usando informação de
+carteiras e de redes de fundos. A pergunta empírica nasce de uma ideia simples: se investidores
+institucionais têm demandas persistentes por ativos, então as carteiras observadas podem conter informação
+sobre comportamento futuro. A literatura de \emph{demand-based asset pricing} fornece a motivação: preços não
+são determinados apenas por fundamentos agregados, mas também pela demanda de investidores com restrições,
+preferências e mandatos específicos \citep{koijenyogo2019,gabaixkoijen2021}.
 
 O caso brasileiro é adequado para esse exercício porque a CVM disponibiliza bases públicas de fundos. A CONS
 permite observar a composição consolidada das carteiras e a SH permite associar cada fundo à sua gestora e
-ao seu patrimônio líquido. Essas duas bases, porém, informam valores de posição, não quantidades de ações.
-Por isso, o trabalho separa duas medidas. A primeira é a exposição em valor, útil para escala econômica,
-risco patrimonial e comparação em US\$. A segunda é a quantidade estimada de ações, construída para ITUB4 a
-partir do preço de fechamento da B3/COTAHIST \citep{b3_cotahist}. Essa segunda medida é a aproximação mais
-direta da demanda por ações.
+ao seu patrimônio líquido. Essas bases permitem medir exposição em valor, em R\$ e US\$, que é a medida mais
+direta de escala econômica e risco patrimonial. A dificuldade é que a CONS, por ser consolidada, apaga o
+caminho de fundos investindo em fundos. Para construir um sistema preditivo por grafo, o trabalho usa a CDA
+Bloco~2, que registra cotas de fundos e permite recuperar as arestas fundo$\to$fundo.
 
-O trabalho responde a quatro perguntas:
+O desenho preditivo é: para cada ação e mês, medir quem aumentou ou reduziu exposição; para cada gestora,
+usar seu próprio histórico, o comportamento das demais gestoras (o ``restante do mercado'', ou $n-1$) e a
+rede de fundos interconectados como informação para prever exposição futura. A quantidade estimada de ações,
+construída para ITUB4 com fechamento B3/COTAHIST \citep{b3_cotahist}, é mantida como robustez conceitual:
+ela ajuda a separar efeito de preço de mudança aproximada de quantidade, mas a medida principal de exposição
+do trabalho permanece em valor.
+
+O trabalho responde a cinco perguntas:
 \begin{enumerate}
-\item Como medir a exposição das gestoras a ações em valor, com tratamento consistente de empréstimos de
+\item Como medir a exposição das gestoras a ações em R\$ e US\$, com tratamento consistente de empréstimos de
 ações e grupos econômicos?
-\item Como transformar a posição em valor de ITUB4 em quantidade estimada de ações, separando efeito de
-preço de mudança de demanda?
-\item A variação mensal da quantidade de ITUB4 é previsível?
-\item O nível da quantidade de ITUB4 reverte a uma alocação-alvo?
-\item A previsibilidade observada em ITUB4 se generaliza para outras ações?
+\item Como reconstruir a rede fundo$\to$fundo que a CONS apaga ao consolidar carteiras?
+\item Existem circularidades ou aninhamentos profundos nas estruturas FIC/master?
+\item A exposição futura de uma gestora pode ser prevista a partir do próprio histórico, do restante do
+mercado e da rede?
+\item A evidência inicial de ITUB4 se generaliza para outras ações?
 \end{enumerate}
 
-Há uma dimensão complementar: fundos de cotas (FICs) investem em outros fundos, criando estruturas
-fundo-sobre-fundo. A CONS, por ser consolidada, dissolve essas relações e mostra a exposição final em ações.
-Por isso, qualquer análise explícita de rede fundo$\to$fundo exige outra base. O Apêndice~\ref{ap:cda}
-documenta uma extensão exploratória com a CDA Bloco~2. Essa extensão não é necessária para medir nem prever
-a exposição no painel principal; ela serve para avaliar dupla contagem e risco estrutural caso o orientador
-aprove esse eixo no TCC.
+Assim, a CDA não entra como base alternativa à CONS. As duas têm funções diferentes. A CONS mede a exposição
+final em ações; a CDA recupera o caminho de fundos sobre fundos que pode ser usado para modelar propagação,
+duplicação e risco de estruturas interconectadas. Os detalhes de tratamento da CDA permanecem no
+Apêndice~\ref{ap:cda}, mas a motivação da rede faz parte do núcleo do trabalho.
 
 \chapter{Revisão Bibliográfica}
 
@@ -122,22 +131,25 @@ referência metodológica usada no projeto é \citet{artesbarroso2023}. Empirica
 na janela de treino para evitar vazamento de informação.
 
 Redes neurais em grafo são mencionadas como possibilidade metodológica, com referência introdutória em
-\citet{sanchezlengeling2021}. No projeto, entretanto, a evidência de rede aparece apenas como especificação
-complementar: features simples de vizinhança no grafo CDA não melhoram a previsão, o que reduz o retorno
-esperado de um GNN para forecasting.
+\citet{sanchezlengeling2021}. A motivação é direta: se fundos de uma gestora estão conectados a outros fundos
+por relações de cotas, então a exposição de uma gestora pode depender não apenas de seu próprio histórico,
+mas também da vizinhança no grafo. Neste estágio, o trabalho implementa baselines lineares, PCA/fatores e uma
+primeira feature de rede. O passo metodológico natural é transformar essa estrutura em um modelo de previsão
+por grafo, no qual nós representam fundos ou gestoras e arestas representam posições fundo$\to$fundo.
 
 \section{Plataformas de investimento}
 
 O working paper \emph{Replicant Investment Platforms}, do Prof.\ Maurício Ferraresi Junior
 \citep{ferraresi_replicant}, é mantido como referência provisória a confirmar. Ele é relevante para a
-interpretação de plataformas e vasos de investimento entre fundos, especialmente se a extensão com CDA for
-mantida no trabalho. Como a citação exata ainda precisa ser confirmada, este eixo fica tratado com cautela.
+interpretação de plataformas e vasos de investimento entre fundos, exatamente o tipo de estrutura que a CDA
+permite observar empiricamente. Como a citação exata ainda precisa ser confirmada, este eixo fica tratado com
+cautela.
 
 \chapter{Metodologia e Dados}
 
 \section{Bases do núcleo empírico}
 
-O núcleo do trabalho usa duas bases públicas da CVM e uma base auxiliar de preços da B3:
+O núcleo do trabalho usa três bases públicas da CVM e uma base auxiliar de preços da B3:
 
 \paragraph{CONS.} A composição consolidada de carteiras tem granularidade fundo $\times$ mês $\times$ ativo.
 No período 2016--2021, a amostra tratada contém aproximadamente 21,1 milhões de linhas. A base é 100\%
@@ -148,6 +160,11 @@ científica.
 \paragraph{SH.} A série histórica dos fundos tem granularidade fundo $\times$ dia e traz informações de
 gestora, classificação, nome do fundo e patrimônio líquido. O PL vem em formato brasileiro e é convertido
 para número com parser específico.
+
+\paragraph{CDA Bloco 2.} A Composição e Diversificação das Aplicações (CDA) informa posições de fundos em
+cotas de outros fundos. O Bloco~2 é usado para reconstruir arestas fundo$\to$fundo. Essa base é necessária
+para a camada de rede do sistema preditivo, pois a CONS, ao consolidar a carteira, mostra o ativo final mas
+não preserva a trajetória FIC/master.
 
 \paragraph{B3/COTAHIST.} A CONS não informa quantidade de ações. Para converter a posição em ITUB4 de valor
 para quantidade estimada, usa-se o fechamento diário oficial da B3/COTAHIST, mercado à vista
@@ -169,7 +186,8 @@ Os principais tratamentos são:
 \item classificação das variantes de exposição em direta, cedida e obrigação;
 \item consolidação de gestoras por grupo econômico via regras de texto;
 \item conversão de R\$ para US\$ com PTAX de fim de mês (BCB SGS série~1);
-\item conversão de valor de ITUB4 para quantidade estimada de ações com fechamento mensal B3/COTAHIST;
+\item reconstrução da rede fundo$\to$fundo com a CDA Bloco~2;
+\item conversão auxiliar de valor de ITUB4 para quantidade estimada de ações com fechamento mensal B3/COTAHIST;
 \item construção de deltas mensais apenas quando os meses são consecutivos.
 \end{itemize}
 
@@ -190,10 +208,34 @@ A definição principal é \emph{net}. No período, a soma das posições mensai
 definição direta, R\$\,540 bi na definição long e R\$\,496 bi na definição net. A definição net gera 264
 observações gestora-mês com posição líquida negativa, evidenciando a relevância do aluguel de ações.
 
+\section{Rede de fundos e problema preditivo}
+
+A motivação de rede vem do fato de que fundos de cotas podem investir em outros fundos. Nesses casos, a
+exposição de uma gestora a uma ação pode refletir posições diretas de seus fundos, posições indiretas via
+fundos investidos e conexões com outras estruturas. A CDA Bloco~2 permite reconstruir essas conexões como um
+grafo direcionado, em que a aresta $A\to B$ significa que o fundo A detém cotas do fundo B.
+
+O problema preditivo pode ser escrito em três níveis. No nível básico, para cada gestora $g$, ação $i$ e mês
+$t$, observa-se a exposição $E_{g,i,t}$ e sua variação $\Delta E_{g,i,t}$. No nível de mercado, o conjunto
+das demais gestoras, $-g$, resume o comportamento do restante do mercado naquela ação. No nível de rede, as
+arestas da CDA informam quais fundos ou gestoras estão próximos no grafo. O sistema de previsão, portanto,
+procura usar:
+\[
+\widehat{E}_{g,i,t+1}
+= f(E_{g,i,\leq t}, E_{-g,i,\leq t}, G_t),
+\]
+em que $G_t$ é o grafo fundo-sobre-fundo observado no mês $t$.
+
+Neste estágio, o trabalho implementa baselines transparentes: \emph{random walk}, AR, modelos de painel,
+PCA/fatores e uma primeira feature de rede baseada na exposição de vizinhos. A formulação por GNN é o
+próximo passo natural: ela permitiria aprender pesos a partir do grafo, em vez de impor manualmente uma média
+de vizinhos.
+
 \section{Quantidade estimada de ações}
 
-Para estudar demanda, valor monetário não é suficiente. A posição em reais varia tanto por compra e venda de
-ações quanto por variação de preço. Como a CONS não traz número de ações, a quantidade é estimada por:
+Para estudar demanda em sentido estrito, valor monetário não é suficiente. A posição em reais varia tanto por
+compra e venda de ações quanto por variação de preço. Como a CONS não traz número de ações, a quantidade é
+estimada por:
 \[
 q_{g,t}^{ITUB4} =
 \frac{V_{g,t}^{ITUB4}\times 1000}{P_t^{ITUB4}},
@@ -214,10 +256,11 @@ A definição principal permanece \emph{net}. A validação numérica reconstró
 $q_{g,t}^{ITUB4}P_t^{ITUB4}/1000$ com erro máximo de aproximadamente $9{,}3\times10^{-10}$ mil reais, isto
 é, apenas erro de arredondamento de máquina.
 
-Essa quantidade deve ser lida como quantidade estimada, não observada diretamente. Ela é a melhor aproximação
-possível com CONS+B3, mas eventos societários que alterem mecanicamente o número de ações exigem cautela na
-interpretação temporal. No recorte empírico, a vantagem central continua sendo separar efeito de preço de
-mudança aproximada de demanda.
+Essa quantidade deve ser lida como robustez e não como substituta da exposição em valor. Ela é a melhor
+aproximação possível com CONS+B3 para separar efeito de preço de mudança aproximada de demanda, mas eventos
+societários que alterem mecanicamente o número de ações exigem cautela na interpretação temporal. A medida
+principal do TCC permanece a exposição em valor, por ser mais direta para risco patrimonial e gerenciamento
+de risco.
 
 \section{Unidade de análise}
 
@@ -232,8 +275,8 @@ até o mês $t$ e prevê $t+h$. O benchmark é o \emph{random walk}: para a vari
 $\widehat{\Delta}=0$; para o nível, a previsão é $\widehat{y}_{t+h}=y_t$.
 
 As métricas são RMSE, MAE, \emph{skill} contra o \emph{random walk} e acerto de direção. PCA e fatores são
-estimados somente na janela de treino, sem usar informação futura. A análise em valor é mantida para escala
-econômica; a análise em quantidade estimada é tratada como especificação principal de demanda para ITUB4.
+estimados somente na janela de treino, sem usar informação futura. A análise em valor é a especificação
+principal; a análise em quantidade estimada é uma robustez para ITUB4.
 
 \chapter{Resultados}
 
@@ -284,13 +327,50 @@ fragilidade por propriedade comum.
 \label{fig:crowd}
 \end{figure}
 
+\section{Rede fundo-sobre-fundo e duplicação}
+
+A CDA Bloco~2 reconstrói 835.694 arestas fundo$\to$fundo no período 2016--2021. A primeira pergunta de risco
+é se existem estruturas circulares. No subgrafo dos fundos observados no universo empírico, a resposta é
+negativa: todos os 72 meses são DAGs. Ou seja, não encontramos ciclos diretos que fariam um FIC retornar ao
+próprio caminho de investimento. Ao mesmo tempo, há aninhamento relevante: a profundidade máxima tem mediana
+7 e máximo 9 níveis.
+
+\begin{table}[H]\centering
+\caption{Estrutura da rede CDA no universo observado.}
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Métrica} & \textbf{Valor} \\
+\midrule
+Arestas CDA processadas & 835.694 \\
+Meses analisados & 72 \\
+Meses com ciclos & 0 \\
+Profundidade máxima mediana & 7 \\
+Profundidade máxima observada & 9 \\
+Nós no último mês & 2.565 \\
+Arestas no último mês & 5.968 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A segunda pergunta é quanto a soma de fundos da mesma gestora duplica exposição. Para ITUB4, a exposição
+bruta intra-gestora soma R\$\,496,5 bi ao longo dos meses; após remover a parcela indireta estimada via
+relações FIC/master da própria gestora, a exposição cai para R\$\,309,8 bi. A duplicação interna estimada é
+37,6\%. No caso do Itaú, a duplicação média é 41,7\%.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.82\textwidth]{itub4_dedup_itau.png}
+\caption{Itaú: exposição bruta e de-duplicada em ITUB4.}
+\label{fig:dedup}
+\end{figure}
+
 \section{Previsão da variação mensal}
 
 Nas primeiras rodadas de forecasting, o alvo era a variação mensal da posição em US\$ para ITUB4. O
 resultado já era negativo e informativo: AR, média e PCA não superavam o \emph{random walk}. Ao refazer o
-exercício em quantidade estimada de ações, que é a variável mais próxima de demanda, a conclusão se mantém e
-fica ainda mais clara. O melhor modelo, AR encolhido, melhora apenas 0,6\% no RMSE e piora no MAE. A direção
-fica em torno de 50\%.
+exercício em quantidade estimada de ações, como robustez para separar preço e quantidade, a conclusão se
+mantém. O melhor modelo, AR encolhido, melhora apenas 0,6\% no RMSE e piora no MAE. A direção fica em torno
+de 50\%.
 
 \begin{table}[H]\centering
 \caption{Variação mensal da quantidade estimada de ITUB4: \emph{skill} contra random walk.}
@@ -314,8 +394,9 @@ PCA $k=3$ & 6,19 & -14,2\% & -25,8\% & 50,4\% \\
 \label{fig:qdelta}
 \end{figure}
 
-A leitura é que a variação mensal da demanda aproximada se comporta como martingale. Esse resultado não é um
-fracasso empírico; ele define onde a previsibilidade não está.
+A leitura é que a variação mensal, tanto em valor quanto em quantidade aproximada, é difícil de prever com
+modelos lineares simples. Esse resultado não encerra a pergunta; ele motiva usar informação adicional de
+mercado e de rede.
 
 \section{Previsão do nível e reversão à média}
 
@@ -330,7 +411,7 @@ patrimonial, mas não deve ser interpretado automaticamente como previsibilidade
 \label{fig:r3}
 \end{figure}
 
-Quando o alvo é o nível da quantidade estimada de ações, a evidência é mais fraca. O AR individual melhora o
+Como robustez, quando o alvo é o nível da quantidade estimada de ações, a evidência é mais fraca. O AR individual melhora o
 RMSE em 3,5\% no horizonte de um mês, mas perde para o \emph{random walk} em três e seis meses. O modelo de
 painel também não melhora a previsão. Portanto, a reversão em valor é mais forte do que a reversão em
 quantidade.
@@ -377,30 +458,35 @@ generalização para quantidade exigiria baixar e validar preços mensais para t
 
 Uma especificação complementar adiciona a exposição dos vizinhos no grafo CDA como preditor do nível da
 posição. O resultado não melhora o baseline de reversão à média: AR1 de painel tem \emph{skill} de 3,3\%,
-enquanto o modelo com rede tem 3,1\%. Assim, mesmo que a CDA seja mantida como apêndice de risco, ela não
-parece útil como motor de previsão neste desenho.
+enquanto o modelo com rede tem 3,1\%. Esse resultado deve ser lido com cautela. Ele não descarta o uso de
+redes; mostra apenas que uma feature manual simples, baseada em média de vizinhos, não basta para superar o
+AR de painel. O próximo passo coerente com a motivação do trabalho é formular um modelo de grafo mais
+expressivo, em que a rede CDA e o comportamento do restante do mercado sejam usados conjuntamente para prever
+exposição por gestora e por ação.
 
 \chapter{Conclusão}
 
-O projeto entrega quatro conclusões principais. Primeiro, é possível construir um painel mensal coerente de
+O projeto entrega cinco conclusões principais. Primeiro, é possível construir um painel mensal coerente de
 exposição das gestoras a ações usando CONS e SH, com tratamento cuidadoso de formato numérico, empréstimos de
-ações, grupos econômicos e PTAX. Segundo, para ITUB4, é possível transformar exposição em valor em quantidade
-estimada de ações usando fechamento mensal oficial da B3/COTAHIST, com auditoria numérica direta. Terceiro,
-a variação mensal da quantidade estimada é difícil de prever; o \emph{random walk} é um benchmark forte.
-Quarto, a previsibilidade em valor é maior do que a previsibilidade em quantidade, o que mostra que parte da
-reversão observada em US\$ vem de dinâmica patrimonial e de preço, não necessariamente de demanda previsível
-por ações.
+ações, grupos econômicos, R\$ e US\$. Segundo, a CDA Bloco~2 é a base adequada para recuperar a rede
+fundo$\to$fundo que a CONS apaga ao consolidar carteiras. Terceiro, essa rede não apresenta ciclos no período
+analisado, mas tem aninhamento relevante e gera duplicação intra-gestora material. Quarto, a variação mensal
+da exposição é difícil de prever com modelos lineares simples; o \emph{random walk} é um benchmark forte.
+Quinto, o nível da exposição em valor apresenta alguma reversão à média, especialmente em ITUB4, mas a
+quantidade estimada mostra que parte dessa reversão patrimonial não deve ser confundida com compra e venda
+previsível de ações.
 
-A interpretação econômica fica mais precisa. A demanda institucional medida em número aproximado de ações
-muda de forma ruidosa no curto prazo. Já a exposição em valor de algumas ações muito líquidas e amplamente
-detidas parece retornar a níveis patrimoniais de referência. Essa distinção é central para
-\emph{demand-based asset pricing}: se o objeto é demanda, quantidade deve ser privilegiada; se o objeto é
-risco patrimonial, valor é a medida apropriada. Esses mesmos papéis continuam relevantes para a discussão de
-fragilidade, pois concentram demanda institucional sobreposta.
+A interpretação econômica é alinhada à literatura de demanda por ações. Carteiras observadas revelam demanda
+institucional e permitem estudar quem aumenta ou reduz exposição em cada ação. Ao mesmo tempo, a estrutura de
+fundos interconectados adiciona uma dimensão de risco: a exposição final não depende apenas da gestora
+isolada, mas também de como seus fundos estão ligados a outros fundos. Portanto, o caminho natural do TCC é
+um sistema de previsão de exposição por gestora e ação, usando histórico próprio, restante do mercado e rede
+fundo-sobre-fundo.
 
-O uso da CDA deve permanecer no apêndice até validação explícita com o orientador. A base é tecnicamente
-adequada para reconstruir relações fundo$\to$fundo, mas ela não foi parte do desenho inicial. A contribuição
-principal do TCC não depende dela; a CDA aprofunda a discussão de risco de estruturas FIC/master.
+O resultado negativo da feature manual de rede não fecha a questão. Ele funciona como baseline: uma média de
+vizinhos não acrescenta sinal suficiente, mas um modelo de grafo mais flexível ainda é metodologicamente
+coerente com o problema. A próxima etapa é formalizar essa previsão em painel gestora $\times$ ação $\times$
+mês, com features de mercado e de rede, e comparar o ganho preditivo contra \emph{random walk}, AR e fatores.
 
 \appendix
 \chapter{Apêndice: CDA e Estruturas Fundo-Sobre-Fundo}\label{ap:cda}
@@ -409,8 +495,8 @@ principal do TCC não depende dela; a CDA aprofunda a discussão de risco de est
 
 A CONS é consolidada: ela mostra os ativos finais da carteira, mas apaga relações entre fundos. Se um FIC
 investe em um master que detém ações, a CONS mostra a exposição final em ações. Isso é ótimo para medir
-exposição, mas insuficiente para estudar a estrutura fundo$\to$fundo. A CDA Bloco~2 entra apenas para esse
-segundo objetivo.
+exposição, mas insuficiente para estudar a estrutura fundo$\to$fundo. A CDA Bloco~2 entra para reconstruir
+essa rede, que é a base natural para modelos de previsão via grafos.
 
 \section{O que é a CDA Bloco 2}
 
@@ -483,25 +569,28 @@ gestoras no universo observado, a duplicação rastreável aumenta em cerca de 5
 a 43,0\%. Portanto, o número de 37,6\% deve sempre ser lido como duplicação \emph{intra-gestora}, não como
 duplicação total do sistema.
 
-\section{Resultados exploratórios}
+\section{Resultados da rede CDA}
 
 No módulo CDA, o grafo observado é acíclico nos 72 meses e tem profundidade relevante: a cadeia máxima tem
 mediana 7 e máximo 9 níveis. A extensão para todas as ações sugere duplicação intra-gestora próxima de 37\%
-também em \emph{blue chips}. Esses achados são substantivos, mas pertencem ao apêndice porque dependem da
-aceitação metodológica da CDA no desenho do TCC.
+também em \emph{blue chips}. Esses achados sustentam a motivação de risco: fundos sobre fundos podem ampliar
+exposição econômica e criar camadas relevantes de interconexão, mesmo sem circularidade.
 
 \section{Limitações da CDA}
 
-A CDA tem três limitações principais para este trabalho:
+A CDA tem três limitações principais:
 \begin{enumerate}
-\item ela não foi a base originalmente definida com o orientador;
-\item muitos destinos estão fora do universo CONS+SH usado no painel principal;
+\item ela mede relações de cotas de fundos, não exposição final em ações; por isso deve ser usada junto com a
+CONS, não em substituição a ela;
+\item muitos destinos estão fora do universo CONS+SH usado no painel principal, o que limita a cobertura de
+rede observável;
 \item a interpretação de \texttt{DT\_CONFID\_APLIC} exige cautela e não deve ser descrita como destino
 mascarado quando o CNPJ do destino está preenchido.
 \end{enumerate}
 
-Assim, a recomendação metodológica é manter a CDA como apêndice: útil, auditada e transparente, mas separada
-do núcleo empírico até validação explícita.
+Assim, a CDA deve ser tratada como infraestrutura de rede: essencial para estudar fundos sobre fundos, mas
+dependente de filtros, cobertura e validações próprias. O apêndice documenta esses detalhes para que a camada
+de grafo seja auditável.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
